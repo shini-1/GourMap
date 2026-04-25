@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useNetwork } from '../src/contexts/NetworkContext';
-import { OfflineQueueService } from '../src/services/offlineQueueService';
+import { useNetwork } from '../contexts/NetworkContext';
+import { OfflineQueueService } from '../services/offlineQueueService';
 
 interface OfflineBannerProps {
   onSyncPress?: () => void;

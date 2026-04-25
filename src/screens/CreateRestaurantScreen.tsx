@@ -13,11 +13,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import Header from '../components/Header';
-import { restaurantService, CreateRestaurantData } from '../src/services/restaurantService';
+import { restaurantService, CreateRestaurantData } from '../services/restaurantService';
 import * as ImagePicker from 'expo-image-picker';
 import { LocationService } from '../services/expoLocationService';
-import { reverseGeocode } from '../src/services/geocodingService';
-import { uploadImageToRestaurantBucket } from '../src/services/imageService';
+import { reverseGeocode } from '../services/geocodingService';
+import { uploadImageToRestaurantBucket } from '../services/imageService';
 
 // Design colors matching the Home Screen exactly
 const DESIGN_COLORS = {

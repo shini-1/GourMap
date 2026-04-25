@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import Header from '../components/Header';
-import { DESIGN_COLORS, SHADOW_STYLE, BORDER_RADIUS } from '../src/config/designColors';
+import { DESIGN_COLORS, SHADOW_STYLE, BORDER_RADIUS } from '../config/designColors';
 
 interface StatisticCard {
   title: string;

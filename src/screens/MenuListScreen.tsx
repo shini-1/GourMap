@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, FlatList } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import Header from '../components/Header';
-import { DESIGN_COLORS, SHADOW_STYLE, BORDER_RADIUS } from '../src/config/designColors';
+import { DESIGN_COLORS, SHADOW_STYLE, BORDER_RADIUS } from '../config/designColors';
 
 interface MenuItem {
   id: string;

@@ -13,15 +13,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { Restaurant, MenuItem } from '../types';
-import { reverseGeocode } from '../src/services/geocodingService';
-import { menuService } from '../src/services/menuService';
-import { promoService, Promo } from '../src/services/promoService';
-import { getAverageRating, getUserRating, submitRating } from '../src/services/ratingsService';
-import { getDeviceId } from '../src/services/deviceId';
-import { submitDeviceRating, getDeviceRating } from '../src/services/deviceRatingsService';
-import { supabase } from '../src/config/supabase';
+import { reverseGeocode } from '../services/geocodingService';
+import { menuService } from '../services/menuService';
+import { promoService, Promo } from '../services/promoService';
+import { getAverageRating, getUserRating, submitRating } from '../services/ratingsService';
+import { getDeviceId } from '../services/deviceId';
+import { submitDeviceRating, getDeviceRating } from '../services/deviceRatingsService';
+import { supabase } from '../config/supabase';
 import Header from '../components/Header';
-import MapBoxWebView from '../components/MapBoxWebView';
+import MapBoxNative from '../components/MapBoxNative';
 
 // Design colors matching the Home Screen exactly
 const DESIGN_COLORS = {
@@ -699,7 +699,7 @@ function RestaurantDetailScreen({ navigation, route }: RestaurantDetailScreenPro
               </TouchableOpacity>
             </View>
             <View style={styles.mapContainer}>
-              <MapBoxWebView restaurants={[restaurant]} />
+              <MapBoxNative restaurants={[restaurant] as any[]} />
             </View>
           </View>
         </View>

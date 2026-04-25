@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Restaurant } from '../../types';
-import { Category } from '../../types';
+import { Restaurant } from '../types';
+import { Category } from '../types';
 import { getAllCategories } from './categoryService';
 import { restaurantService } from './restaurantService';
 

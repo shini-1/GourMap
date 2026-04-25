@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { cacheStatusService, CacheStatus } from '../src/services/cacheStatusService';
+import { cacheStatusService, CacheStatus } from '../services/cacheStatusService';
 
 interface CacheStatusIndicatorProps {
   onPress?: () => void;

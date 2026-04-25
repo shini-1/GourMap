@@ -2,17 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Button, FlatList, Alert, TouchableOpacity, Modal, TextInput, ScrollView, StyleSheet, ActivityIndicator, Image, RefreshControl } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import Header from '../components/Header';
-import { getRestaurants, deleteRestaurant, getApprovedRestaurants, getPendingRestaurants, approveRestaurant, rejectRestaurant, deleteRestaurantOwner, updateRestaurantOwner, getRestaurantStats, updateRestaurant, addRestaurant } from '../services/restaurants';
-import { menuService } from '../src/services/menuService';
-import { uploadAndUpdateRestaurantImage } from '../src/services/imageService';
+import { restaurantService } from '../services/restaurantService';
+import { menuService } from '../services/menuService';
+import { uploadAndUpdateRestaurantImage } from '../services/imageService';
 import { Restaurant, RestaurantOwner, RestaurantSubmission, MenuItem } from '../types';
+import { restaurantUrls } from '../utils/importRestaurants';
+import { parseGoogleMapsUrl } from '../utils/googleMapsParser';
 import * as ImagePicker from 'expo-image-picker';
 import * as Linking from 'expo-linking';
-import { reverseGeocode } from '../src/services/geocodingService';
+import { reverseGeocode } from '../services/geocodingService';
 import { LocationService } from '../services/expoLocationService';
-import { listOwnersFromAuth, confirmOwnerEmail, verifyOwner, confirmAndVerify, BusinessOwnerAdminView } from '../src/services/adminBusinessOwnersService';
-import { adminAuthService } from '../src/services/adminAuthService';
-import { supabase, TABLES, SUPABASE_CONFIG } from '../src/config/supabase';
+import { listOwnersFromAuth, confirmOwnerEmail, verifyOwner, confirmAndVerify, BusinessOwnerAdminView } from '../services/adminBusinessOwnersService';
+import { adminAuthService } from '../services/adminAuthService';
+import { supabase, TABLES, SUPABASE_CONFIG } from '../config/supabase';
 
 // Design colors matching the Home Screen exactly
 const DESIGN_COLORS = {
@@ -95,7 +97,7 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
-        const data = await getRestaurants();
+        const data = await restaurantService.getAllRestaurants();
         setRestaurants(data);
       } catch (error) {
         console.error('Failed to fetch restaurants:', error);
@@ -160,7 +162,7 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
     const fetchPendingBusinesses = async () => {
       try {
         setLoadingPending(true);
-        const data = await getPendingRestaurants();
+        const data = await restaurantService.getPendingSubmissions();
         setPendingBusinesses(data);
       } catch (error) {
         console.error('Failed to fetch pending businesses:', error);
@@ -232,7 +234,7 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
 
   const handleDeleteBusiness = async (businessId: string) => {
     try {
-      await deleteRestaurantOwner(businessId);
+      await restaurantService.deleteBusinessOwner(businessId);
     } catch (error: any) {
       Alert.alert('Error', `Delete failed: ${error.message}`);
     }
@@ -240,10 +242,10 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
 
   const handleApproveBusiness = async (submissionId: string) => {
     try {
-      await approveRestaurant(submissionId);
+      await restaurantService.approveSubmission(submissionId);
       setPendingBusinesses(prev => prev.filter(s => s.id !== submissionId));
       Alert.alert('Success', 'Restaurant approved successfully!');
-      const updatedPending = await getPendingRestaurants();
+      const updatedPending = await restaurantService.getPendingSubmissions();
       setPendingBusinesses(updatedPending);
     } catch (error: any) {
       Alert.alert('Error', `Approval failed: ${error.message}`);
@@ -254,7 +256,7 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
     if (!rejectingBusinessId) return;
 
     try {
-      await rejectRestaurant(rejectingBusinessId, rejectionReason);
+      await restaurantService.rejectSubmission(rejectingBusinessId, rejectionReason);
       setPendingBusinesses(prev => prev.filter(s => s.id !== rejectingBusinessId));
       setShowRejectionModal(false);
       setRejectingBusinessId(null);
@@ -427,7 +429,7 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
 
   const handleDelete = async (id: string) => {
     try {
-      await deleteRestaurant(id);
+      await restaurantService.deleteRestaurant(id);
       setRestaurants(prev => prev.filter(r => r.id !== id));
       Alert.alert('Success', 'Restaurant deleted!');
     } catch (error: any) {
@@ -463,7 +465,7 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
         ? Math.max(0, Math.min(5, editorialValue))
         : undefined;
 
-      await updateRestaurant(editingRestaurant.id, {
+      await restaurantService.updateRestaurant(editingRestaurant.id, {
         name,
         location: { latitude, longitude },
         image: editForm.image.trim() || undefined,
@@ -556,10 +558,10 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
 
       console.log('🏪 Admin(Add): Final restaurant data:', restaurantData);
 
-      await addRestaurant(restaurantData);
+      await restaurantService.addRestaurant(restaurantData);
       console.log('🏪 Admin(Add): Restaurant added to database successfully');
 
-      const updatedRestaurants = await getRestaurants();
+      const updatedRestaurants = await restaurantService.getAllRestaurants();
       setRestaurants(updatedRestaurants);
       console.log('🏪 Admin(Add): Restaurant list refreshed');
 
@@ -596,8 +598,8 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
   const handleCleanupDuplicates = async () => {
     try {
       Alert.alert('Cleaning up', 'Removing duplicate restaurants...');
-      const { cleanupDuplicateRestaurants } = await import('../services/restaurants');
-      const result = await cleanupDuplicateRestaurants();
+      const { restaurantService } = await import('../services/restaurantService');
+      const result = await restaurantService.cleanupDuplicates();
       Alert.alert('Success', `Cleanup complete! Deleted ${result.deleted} duplicates, kept ${result.kept} unique restaurants.`);
     } catch (error: any) {
       Alert.alert('Error', `Cleanup failed: ${error.message}`);
@@ -606,8 +608,7 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
 
   const handleShowStats = async () => {
     try {
-      const { getRestaurantStats } = await import('../services/restaurants');
-      const stats = await getRestaurantStats();
+      const stats = await restaurantService.getStats();
 
       Alert.alert(
         'Restaurant Statistics',
@@ -629,8 +630,7 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              const { clearAllRestaurants } = await import('../services/restaurants');
-              const deletedCount = await clearAllRestaurants();
+              const deletedCount = await restaurantService.clearAllRestaurants();
               Alert.alert('Success', `Database cleared! Deleted ${deletedCount} restaurants.`);
             } catch (error: any) {
               Alert.alert('Error', `Clear failed: ${error.message}`);
@@ -642,14 +642,9 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
   };
 
   const handleImportRestaurants = async () => {
-    const { addRestaurantsFromGoogleMaps } = await import('../services/restaurants');
-    const { restaurantUrls } = await import('../utils/importRestaurants');
-
-    try {
-      Alert.alert('Importing', 'Please wait...');
-      await addRestaurantsFromGoogleMaps(restaurantUrls);
+      await restaurantService.addFromGoogleMaps(restaurantUrls);
       Alert.alert('Success', 'Restaurants imported successfully!');
-      const data = await getRestaurants();
+      const data = await restaurantService.getAllRestaurants();
       setRestaurants(data);
     } catch (error: any) {
       Alert.alert('Error', `Import failed: ${error.message}`);
@@ -777,11 +772,7 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
 
   const handleVerifyDataIntegrity = async () => {
     try {
-      const { getRestaurants } = await import('../services/restaurants');
-      const { restaurantUrls } = await import('../utils/importRestaurants');
-      const { parseGoogleMapsUrl } = await import('../utils/googleMapsParser');
-
-      const currentRestaurants = await getRestaurants();
+      const currentRestaurants = await restaurantService.getAllRestaurants();
       const expectedRestaurants = restaurantUrls.map(url => parseGoogleMapsUrl(url)).filter(r => r !== null);
 
       console.log('🔍 Data Integrity Check:');
@@ -930,7 +921,7 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
                 const imageUri = result.assets[0].uri;
                 console.log('🧪 Test image URI:', imageUri);
 
-                const { uploadImageToRestaurantBucket } = await import('../src/services/imageService');
+                const { uploadImageToRestaurantBucket } = await import('../services/imageService');
                 const testId = `test_${Date.now()}`;
                 const uploadedUrl = await uploadImageToRestaurantBucket(imageUri, testId);
 
@@ -1460,7 +1451,7 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
                         setImageUploading(true);
 
                         try {
-                          const { uploadImageToRestaurantBucket } = await import('../src/services/imageService');
+                          const { uploadImageToRestaurantBucket } = await import('../services/imageService');
                           const tempMenuItemId = `menu_${Date.now()}`;
                           const uploadedImageUrl = await uploadImageToRestaurantBucket(imageUri, tempMenuItemId);
                           
@@ -1783,7 +1774,7 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
                         setImageUploading(true);
 
                         try {
-                          const { uploadImageToRestaurantBucket } = await import('../src/services/imageService');
+                          const { uploadImageToRestaurantBucket } = await import('../services/imageService');
                           const tempRestaurantId = `temp_${Date.now()}`;
                           console.log('📷 Admin(Add): Starting upload with temp ID:', tempRestaurantId);
 

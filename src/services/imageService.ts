@@ -1,5 +1,5 @@
 import { supabase, BUCKETS } from '../config/supabase';
-import type { ImageUploadResult } from '../../types';
+import type { ImageUploadResult } from '../types';
 import * as FileSystem from 'expo-file-system';
 
 // Bucket name for storage

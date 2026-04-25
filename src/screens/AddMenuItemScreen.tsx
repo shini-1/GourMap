@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import Header from '../components/Header';
-import { menuService, CreateMenuItemData } from '../src/services/menuService';
-import { restaurantService } from '../src/services/restaurantService';
-import { supabase } from '../src/config/supabase';
+import { menuService, CreateMenuItemData } from '../services/menuService';
+import { restaurantService } from '../services/restaurantService';
+import { supabase } from '../config/supabase';
 
 // Design colors matching the Home Screen exactly
 const DESIGN_COLORS = {

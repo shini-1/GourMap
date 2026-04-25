@@ -1,6 +1,6 @@
 // utils/importRestaurants.ts - Script to import restaurants from Google Maps URLs
 
-import { addRestaurantsFromGoogleMaps } from '../services/restaurants';
+import { restaurantService } from '../services/restaurantService';
 
 const restaurantUrls = [
   'https://www.google.com/maps/place/M9X9%2B4QV+Panimalai+Resto+%26+Cafe+-+Capitol,+Kalibo,+Aklan/@11.7029722,122.3691118,15z/data=!4m9!1m2!2m1!1sRestaurants!3m5!1s0x33a59d2aa651aea3:0x55b3d85f44d7f619!8m2!3d11.6978607!4d122.3694244!16s%2Fg%2F11h4dj5tj8?entry=ml&utm_campaign=ml-bper&coh=230964&g_ep=Eg1tbF8yMDI1MTAyOV8wIOC7DCoASAJQAg%3D%3D',
@@ -36,7 +36,7 @@ const restaurantUrls = [
 async function importRestaurants() {
   try {
     console.log('Starting restaurant import...');
-    await addRestaurantsFromGoogleMaps(restaurantUrls);
+    await restaurantService.addFromGoogleMaps(restaurantUrls);
     console.log('Restaurant import completed successfully!');
   } catch (error) {
     console.error('Error importing restaurants:', error);

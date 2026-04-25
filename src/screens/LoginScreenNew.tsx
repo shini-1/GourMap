@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { businessOwnerAuthService } from '../src/services/businessOwnerAuthService';
+import { businessOwnerAuthService } from '../services/businessOwnerAuthService';
 import { useAuth } from '../components/AuthContext';
 
 // Design colors matching the Home Screen exactly

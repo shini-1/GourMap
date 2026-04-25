@@ -1,5 +1,5 @@
 import { supabase, TABLES } from '../config/supabase';
-import { Category } from '../../types';
+import { Category } from '../types';
 
 export async function getAllCategories(): Promise<Category[]> {
   try {

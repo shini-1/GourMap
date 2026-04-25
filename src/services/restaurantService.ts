@@ -1,5 +1,5 @@
 import { supabase, TABLES } from '../config/supabase';
-import { Restaurant } from '../../types';
+import { Restaurant } from '../types';
 import { networkService } from './networkService';
 import { localDatabase } from './localDatabase';
 import { syncService } from './syncService';
@@ -499,6 +499,56 @@ class RestaurantService {
   }
 
   /**
+   * Add a new restaurant (legacy compatibility)
+   */
+  async addRestaurant(restaurantData: Omit<Restaurant, 'id'>): Promise<void> {
+    try {
+      const insertData: any = {
+        name: restaurantData.name,
+        description: restaurantData.description ?? '',
+        category: restaurantData.category ?? '',
+        price_range: restaurantData.priceRange ?? '',
+        location: {
+          latitude: restaurantData.location?.latitude ?? null,
+          longitude: restaurantData.location?.longitude ?? null,
+        },
+        image: restaurantData.image ?? '',
+        phone: restaurantData.phone ?? '',
+        website: restaurantData.website ?? '',
+        hours: restaurantData.hours ?? '',
+        rating: restaurantData.rating ?? 0,
+        editorial_rating: restaurantData.editorialRating ?? null,
+      };
+
+      const { error } = await supabase
+        .from(this.RESTAURANTS_TABLE)
+        .insert([insertData]);
+
+      if (error) throw error;
+    } catch (error: any) {
+      console.error('❌ Error adding restaurant:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  /**
+   * Update a restaurant owner profile
+   */
+  async updateRestaurantOwner(businessId: string, updates: any): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from(TABLES.BUSINESS_OWNERS)
+        .update(updates)
+        .eq('uid', businessId);
+
+      if (error) throw error;
+    } catch (error: any) {
+      console.error('❌ Error updating restaurant owner:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  /**
    * Parse location string into coordinates
    * Basic implementation - in production, use geocoding service
    */
@@ -523,6 +573,245 @@ class RestaurantService {
     // TODO: Implement proper geocoding service integration
     console.warn('⚠️ Using default coordinates for location:', locationString);
     return defaultCoords;
+  }
+
+  /**
+   * Get pending restaurant submissions
+   */
+  async getPendingSubmissions(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from(TABLES.RESTAURANT_SUBMISSIONS)
+        .select('*')
+        .eq('status', 'pending')
+        .order('submittedAt', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error: any) {
+      console.error('❌ Error fetching pending submissions:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  /**
+   * Approve a restaurant submission
+   */
+  async approveSubmission(submissionId: string): Promise<void> {
+    try {
+      // First, get the submission data
+      const { data: submission, error } = await supabase
+        .from(TABLES.RESTAURANT_SUBMISSIONS)
+        .select('*')
+        .eq('id', submissionId)
+        .single();
+
+      if (error) throw error;
+      if (!submission) throw new Error('Submission not found');
+
+      // Mark business owner profile as verified
+      const { error: verifyError } = await supabase
+        .from(TABLES.BUSINESS_OWNERS)
+        .update({ is_verified: true, updated_at: new Date().toISOString() })
+        .eq('uid', submission.ownerId);
+
+      if (verifyError) throw verifyError;
+
+      // Update submission status
+      const { error: updateError } = await supabase
+        .from(TABLES.RESTAURANT_SUBMISSIONS)
+        .update({ status: 'approved' })
+        .eq('id', submissionId);
+
+      if (updateError) throw updateError;
+    } catch (error: any) {
+      console.error('❌ Error approving submission:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  /**
+   * Reject a restaurant submission
+   */
+  async rejectSubmission(submissionId: string, reason: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from(TABLES.RESTAURANT_SUBMISSIONS)
+        .update({ 
+          status: 'rejected', 
+          rejection_reason: reason, 
+          rejected_at: new Date().toISOString() 
+        })
+        .eq('id', submissionId);
+
+      if (error) throw error;
+    } catch (error: any) {
+      console.error('❌ Error rejecting submission:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  /**
+   * Update a restaurant (admin/owner)
+   */
+  async updateRestaurant(id: string, updates: Partial<Restaurant>): Promise<void> {
+    try {
+      const updateData: any = { ...updates };
+      
+      // Map editorialRating to database field
+      if (updates.editorialRating !== undefined) {
+        updateData.editorial_rating = updates.editorialRating;
+        delete updateData.editorialRating;
+      }
+      
+      // Map priceRange to database field
+      if (updates.priceRange !== undefined) {
+        updateData.price_range = updates.priceRange;
+        delete updateData.priceRange;
+      }
+
+      const { error } = await supabase
+        .from(this.RESTAURANTS_TABLE)
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error: any) {
+      console.error('❌ Error updating restaurant:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  /**
+   * Delete a restaurant
+   */
+  async deleteRestaurant(id: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from(this.RESTAURANTS_TABLE)
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error: any) {
+      console.error('❌ Error deleting restaurant:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  /**
+   * Delete a business owner account
+   */
+  async deleteBusinessOwner(uid: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from(TABLES.BUSINESS_OWNERS)
+        .delete()
+        .eq('uid', uid);
+
+      if (error) throw error;
+    } catch (error: any) {
+      console.error('❌ Error deleting business owner:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  /**
+   * Get restaurant statistics
+   */
+  async getStats(): Promise<any> {
+    try {
+      const { count: total, error: totalError } = await supabase
+        .from(this.RESTAURANTS_TABLE)
+        .select('*', { count: 'exact', head: true });
+
+      if (totalError) throw totalError;
+
+      const { count: pending, error: pendingError } = await supabase
+        .from(TABLES.RESTAURANT_SUBMISSIONS)
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
+
+      if (pendingError) throw pendingError;
+
+      return {
+        total: total || 0,
+        pending: pending || 0,
+        unique: total || 0,
+        duplicates: 0
+      };
+    } catch (error: any) {
+      console.error('❌ Error getting stats:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  /**
+   * Clear all restaurants (Admin only)
+   */
+  async clearAllRestaurants(): Promise<number> {
+    try {
+      const { count, error: countError } = await supabase
+        .from(this.RESTAURANTS_TABLE)
+        .select('*', { count: 'exact' });
+
+      if (countError) throw countError;
+
+      const { error } = await supabase
+        .from(this.RESTAURANTS_TABLE)
+        .delete()
+        .neq('id', '');
+
+      if (error) throw error;
+      return count || 0;
+    } catch (error: any) {
+      console.error('❌ Error clearing restaurants:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  /**
+   * Cleanup duplicates
+   */
+  async cleanupDuplicates(): Promise<{ deleted: number, kept: number }> {
+    try {
+      const { data: all, error } = await supabase
+        .from(this.RESTAURANTS_TABLE)
+        .select('*');
+
+      if (error) throw error;
+      if (!all || all.length === 0) return { deleted: 0, kept: 0 };
+
+      const unique: any[] = [];
+      const toDelete: string[] = [];
+
+      all.forEach(r => {
+        const isDup = unique.find(u => 
+          u.name.toLowerCase().trim() === r.name.toLowerCase().trim() &&
+          Math.abs((u.location?.latitude || u.latitude) - (r.location?.latitude || r.latitude)) < 0.0005
+        );
+
+        if (isDup) toDelete.push(r.id);
+        else unique.push(r);
+      });
+
+      if (toDelete.length > 0) {
+        await supabase.from(this.RESTAURANTS_TABLE).delete().in('id', toDelete);
+      }
+
+      return { deleted: toDelete.length, kept: unique.length };
+    } catch (error: any) {
+      console.error('❌ Error cleaning up duplicates:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  /**
+   * Bulk add restaurants from URLs
+   */
+  async addFromGoogleMaps(urls: string[]): Promise<void> {
+    // This requires the parser utility which should be moved to utils
+    throw new Error('Bulk import from Google Maps is not directly implemented in this service layer. Use the import utility.');
   }
 
   private getErrorMessage(error: any): string {

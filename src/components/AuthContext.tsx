@@ -1,9 +1,9 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User } from '../types';
-import { supabase } from '../src/config/supabase';
-import { businessOwnerAuthService, BusinessOwnerProfile } from '../src/services/businessOwnerAuthService';
-import { adminAuthService, AdminProfile } from '../src/services/adminAuthService';
-import { offlineAuthService } from '../src/services/offlineAuthService';
+import { supabase } from '../config/supabase';
+import { businessOwnerAuthService, BusinessOwnerProfile } from '../services/businessOwnerAuthService';
+import { adminAuthService, AdminProfile } from '../services/adminAuthService';
+import { offlineAuthService } from '../services/offlineAuthService';
 
 interface AuthContextType {
   user: User | null;

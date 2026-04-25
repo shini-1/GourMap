@@ -1,4 +1,4 @@
-import { addRestaurantsFromGoogleMaps } from '../../services/restaurants';
+import { restaurantService } from '../services/restaurantService';
 
 /**
  * Restaurant URLs from Google Maps for bulk import
@@ -40,7 +40,7 @@ export const restaurantUrls = [
 export const importAllRestaurants = async () => {
   try {
     console.log('🚀 Starting bulk restaurant import...');
-    await addRestaurantsFromGoogleMaps(restaurantUrls);
+    await restaurantService.addFromGoogleMaps(restaurantUrls);
     console.log('✅ All restaurants imported successfully!');
     return { success: true, count: restaurantUrls.length };
   } catch (error) {

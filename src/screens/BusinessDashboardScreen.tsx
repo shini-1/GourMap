@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Header from '../components/Header';
-import { restaurantService } from '../src/services/restaurantService';
-import { supabase } from '../src/config/supabase';
+import { restaurantService } from '../services/restaurantService';
+import { supabase } from '../config/supabase';
 
 // Design colors matching the Home Screen exactly
 const DESIGN_COLORS = {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { ratingSyncService, RatingSyncStatus } from '../src/services/ratingSyncService';
+import { ratingSyncService, RatingSyncStatus } from '../services/ratingSyncService';
 
 interface RatingSyncIndicatorProps {
   onPress?: () => void;

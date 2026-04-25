@@ -1,5 +1,5 @@
 import { supabase, TABLES } from '../config/supabase';
-import { MenuItem } from '../../types';
+import { MenuItem } from '../types';
 import { networkService } from './networkService';
 import { localDatabase } from './localDatabase';
 import { syncService } from './syncService';

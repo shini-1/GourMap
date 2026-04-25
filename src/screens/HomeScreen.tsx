@@ -13,23 +13,23 @@ import {
 import { Image } from 'expo-image';
 import { useTheme } from '../theme/ThemeContext';
 import Header from '../components/Header';
-import MapBoxWebView from '../components/MapBoxWebView';
+import MapBoxNative from '../components/MapBoxNative';
 import CacheStatusIndicator from '../components/CacheStatusIndicator';
 import RatingSyncIndicator from '../components/RatingSyncIndicator';
 import EnhancedRestaurantCard from '../components/EnhancedRestaurantCard';
 import RatingSortSelector, { SortOption } from '../components/RatingSortSelector';
-import { reverseGeocode } from '../src/services/geocodingService';
-import { resolveCategoryConfig, getAllCategoryOptions } from '../src/config/categoryConfig';
-import { restaurantService } from '../src/services/restaurantService';
-import { DatabaseService } from '../src/services/database';
-import { RestaurantRow } from '../src/types/database';
-import { crashLogger } from '../src/services/crashLogger';
-import { cacheStatusService } from '../src/services/cacheStatusService';
-import { ratingSyncService } from '../src/services/ratingSyncService';
-import { ratingCalculationService, RestaurantRatingData } from '../src/services/ratingCalculationService';
-import { useNetwork } from '../src/contexts/NetworkContext';
-import { syncService } from '../src/services/syncService';
-import { localDatabase } from '../src/services/localDatabase';
+import { reverseGeocode } from '../services/geocodingService';
+import { resolveCategoryConfig, getAllCategoryOptions } from '../config/categoryConfig';
+import { restaurantService } from '../services/restaurantService';
+import { DatabaseService } from '../services/database';
+import { RestaurantRow } from '../types/database';
+import { crashLogger } from '../services/crashLogger';
+import { cacheStatusService } from '../services/cacheStatusService';
+import { ratingSyncService } from '../services/ratingSyncService';
+import { ratingCalculationService, RestaurantRatingData } from '../services/ratingCalculationService';
+import { useNetwork } from '../contexts/NetworkContext';
+import { syncService } from '../services/syncService';
+import { localDatabase } from '../services/localDatabase';
 import { Restaurant } from '../types';
 
 // Enhanced error boundary component with detailed debugging
@@ -1780,7 +1780,7 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
       {/* Map Container */}
       <View style={styles.mapContainer}>
         {visibleRestaurants && visibleRestaurants.length > 0 && visibleRestaurants.every(r => r && r.id && r.location) ? (
-          <MapBoxWebView restaurants={visibleRestaurants as CategorizedRestaurant[]} isTyping={isSearchTyping} />
+          <MapBoxNative restaurants={visibleRestaurants as any[]} isTyping={isSearchTyping} />
         ) : (
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>

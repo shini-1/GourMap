@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { adminAuthService } from '../src/services/adminAuthService';
+import { adminAuthService } from '../services/adminAuthService';
 import { useAuth } from '../components/AuthContext';
 
 interface AdminLoginScreenProps {
