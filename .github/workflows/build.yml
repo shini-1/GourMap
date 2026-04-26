@@ -27,7 +27,7 @@ jobs:
           eas-cache: true
 
       - name: 📦 Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: 🏗 Build Web (Test Export)
         run: npx expo export --platform web
