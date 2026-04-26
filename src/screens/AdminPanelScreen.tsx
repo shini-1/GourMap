@@ -642,6 +642,7 @@ function AdminPanelScreen({ navigation }: { navigation: any }) {
   };
 
   const handleImportRestaurants = async () => {
+    try {
       await restaurantService.addFromGoogleMaps(restaurantUrls);
       Alert.alert('Success', 'Restaurants imported successfully!');
       const data = await restaurantService.getAllRestaurants();
