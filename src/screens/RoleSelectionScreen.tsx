@@ -176,7 +176,7 @@ function RoleSelectionScreen({ navigation }: { navigation: any }) {
           {/* Top Section - Light Gray Background with Logo */}
           <View style={styles.topSection}>
             <Image
-              source={require('../assets/splash-icon.png')}
+              source={require('../../assets/splash-icon.png')}
               style={styles.logoImage}
               contentFit="cover"
               transition={300}
