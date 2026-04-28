@@ -6,19 +6,22 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": true
+      }
     },
     "preview": {
-      "distribution": "internal"
-    },
-    "production": {
+      "distribution": "internal",
+      "channel": "preview",
       "android": {
         "buildType": "apk"
       },
       "env": {
-        "NODE_ENV": "production",
-        "EXPO_PUBLIC_SUPABASE_URL": "https://hiioeustuvxgyoezweyp.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpaW9ldXN0dXZ4Z3lvZXp3ZXlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjQ4ODcsImV4cCI6MjA5MjYwMDg4N30.jPdTn5WYV9JQiTmYDuAy6PHakkODPbwm3TZ74w68-0Y",
+      "env": {
         "EXPO_PUBLIC_USE_EDGE_FUNCTIONS": "false"
       }
     },
@@ -29,8 +32,6 @@
       },
       "env": {
         "NODE_ENV": "production",
-        "EXPO_PUBLIC_SUPABASE_URL": "https://hiioeustuvxgyoezweyp.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpaW9ldXN0dXZ4Z3lvZXp3ZXlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjQ4ODcsImV4cCI6MjA5MjYwMDg4N30.jPdTn5WYV9JQiTmYDuAy6PHakkODPbwm3TZ74w68-0Y",
         "EXPO_PUBLIC_USE_EDGE_FUNCTIONS": "false"
       }
     },
@@ -42,9 +43,22 @@
       "distribution": "internal",
       "env": {
         "NODE_ENV": "production",
-        "EXPO_PUBLIC_SUPABASE_URL": "https://hiioeustuvxgyoezweyp.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpaW9ldXN0dXZ4Z3lvZXp3ZXlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjQ4ODcsImV4cCI6MjA5MjYwMDg4N30.jPdTn5WYV9JQiTmYDuAy6PHakkODPbwm3TZ74w68-0Y",
         "EXPO_PUBLIC_USE_EDGE_FUNCTIONS": "false"
+      }
+    },
+
+    "production": {
+      "channel": "production",
+      "android": {
+        "buildType": "aab"
+      },
+      "ios": {
+        "simulator": false
+      },
+      "env": {
+        "NODE_ENV": "production",
+        "EXPO_PUBLIC_USE_EDGE_FUNCTIONS": "true"
+      }
       }
     }
   },

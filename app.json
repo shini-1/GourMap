@@ -39,6 +39,9 @@
       "favicon": "./assets/favicon.png"
     },
     "scheme": "gourmap",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "plugins": [
       "expo-font",
       [
