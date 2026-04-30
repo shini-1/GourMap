@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "GourMap",
-    "slug": "GourMap",
+    "slug": "FoodVenturer",
     "version": "1.10.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
