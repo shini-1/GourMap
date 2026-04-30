@@ -24,6 +24,7 @@ jobs:
         uses: expo/expo-github-action@v8
         with:
           expo-version: latest
+          eas-version: latest
           eas-cache: true
 
       - name: 📦 Install dependencies
@@ -35,5 +36,23 @@ jobs:
       - name: 🏗 Build Android (Test Prebuild)
         run: npx expo prebuild --platform android
 
-      # Note: For full EAS builds, secrets (EXPO_TOKEN) would be required.
-      # This workflow validates that the project can be exported and prebuilt.
+      - name: 🚀 Build Android APK (EAS)
+        if: github.event_name == 'push'
+        run: eas build --profile production --platform android --non-interactive --wait | tee /tmp/eas-build-output.txt
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📥 Download APK from EAS
+        if: github.event_name == 'push'
+        run: |
+          mkdir -p ./build
+          APK_URL=$(grep -oP 'https://\S+\.apk' /tmp/eas-build-output.txt | tail -1)
+          echo "Downloading APK from: $APK_URL"
+          curl -L "$APK_URL" -o ./build/app-production.apk
+
+      - name: 📦 Upload APK Artifact
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-production
+          path: ./build/app-production.apk
