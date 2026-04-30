@@ -39,7 +39,7 @@ jobs:
 
       - name: 🚀 Build Android APK (EAS)
         if: github.event_name == 'push'
-        run: eas build --profile production --platform android --non-interactive --wait | tee /tmp/eas-build-output.txt
+        run: eas build --profile production --platform android --non-interactive --wait
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
@@ -47,9 +47,11 @@ jobs:
         if: github.event_name == 'push'
         run: |
           mkdir -p ./build
-          APK_URL=$(grep -oP 'https://\S+\.apk' /tmp/eas-build-output.txt | tail -1)
+          APK_URL=$(eas build:list --platform android --limit 1 --json --non-interactive | jq -r '.[0].artifacts.buildUrl')
           echo "Downloading APK from: $APK_URL"
-          curl -L "$APK_URL" -o ./build/app-production.apk
+          curl -L -H "Authorization: Bearer $EXPO_TOKEN" "$APK_URL" -o ./build/app-production.apk
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: 📦 Upload APK Artifact
         if: github.event_name == 'push'
