@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import Header from '../components/Header';
 import MapBoxNative from '../components/MapBoxNative';
@@ -755,25 +756,28 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
       initRatingServices();
     }, []);
 
-    // Initialize sync service for offline data
-    useEffect(() => {
-      const initSyncService = async () => {
-        try {
-          console.log('🔄 Initializing sync service for offline support...');
-          
-          // Trigger initial sync to populate SQLite database
-          if (isOnline) {
-            await syncService.sync({ forceFullSync: false, syncRestaurants: true });
-            console.log('✅ Initial sync completed');
+    // Initialize sync service for offline data — only when HomeScreen is focused
+    // (prevents localDatabase from initializing while on business owner screens)
+    useFocusEffect(
+      useCallback(() => {
+        const initSyncService = async () => {
+          try {
+            console.log('🔄 Initializing sync service for offline support...');
+
+            // Trigger initial sync to populate SQLite database
+            if (isOnline) {
+              await syncService.sync({ forceFullSync: false, syncRestaurants: true });
+              console.log('✅ Initial sync completed');
+            }
+
+          } catch (error) {
+            console.error('❌ Error initializing sync service:', error);
           }
-          
-        } catch (error) {
-          console.error('❌ Error initializing sync service:', error);
-        }
-      };
-      
-      initSyncService();
-    }, [isOnline]);
+        };
+
+        initSyncService();
+      }, [isOnline])
+    );
 
     // Process restaurant ratings when restaurants change
     useEffect(() => {
