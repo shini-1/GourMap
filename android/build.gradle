@@ -12,6 +12,13 @@ buildscript {
   }
 }
 
+// Force targetSdkVersion to 34 so rnmapbox_maps uses com.mapbox.maps:android
+// instead of com.mapbox.maps:android-ndk27 (which requires targetSdk >= 35).
+// The NDK27 variant is only needed for Google Play 16KB page size compliance.
+ext {
+  targetSdkVersion = 34
+}
+
 allprojects {
   repositories {
     google()
