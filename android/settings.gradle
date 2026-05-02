@@ -17,6 +17,11 @@ pluginManagement {
   includeBuild(expoPluginsPath)
 }
 
+plugins {
+  id("com.facebook.react.settings")
+  id("expo-autolinking-settings")
+}
+
 dependencyResolutionManagement {
   repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
   repositories {
@@ -32,11 +37,6 @@ dependencyResolutionManagement {
     }
     maven { url 'https://www.jitpack.io' }
   }
-}
-
-plugins {
-  id("com.facebook.react.settings")
-  id("expo-autolinking-settings")
 }
 
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
