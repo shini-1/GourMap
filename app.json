@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "GourMap",
-    "slug": "FoodVenturer",
-    "version": "1.10.0",
+    "slug": "gourmap",
+    "version": "1.11.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -45,10 +45,7 @@
             "newArchEnabled": false
           },
           "android": {
-            "newArchEnabled": false,
-            "extraMavenRepos": [
-              "https://api.mapbox.com/downloads/v2/releases/maven"
-            ]
+            "newArchEnabled": false
           }
         }
       ],
@@ -56,7 +53,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "96f8c0be-919e-4c4e-86c0-ddcbf822da3f"
+        "projectId": "30a35e8e-b670-4549-baa8-67990ee1b91c"
       },
       "mapboxAccessToken": "pk.eyJ1Ijoic2hpbmlpaSIsImEiOiJjbWhkZGIwZzYwMXJmMmtxMTZpY294c2V6In0.zuQl6u8BJxOgimXHxMiNqQ"
     }
