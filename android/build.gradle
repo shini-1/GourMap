@@ -17,6 +17,8 @@ buildscript {
 // The NDK27 variant is only needed for Google Play 16KB page size compliance.
 ext {
   targetSdkVersion = 34
+  // Explicitly set Mapbox Maps version to avoid NDK27 variant selection
+  RNMapboxMapsVersion = "11.15.2"
 }
 
 allprojects {
