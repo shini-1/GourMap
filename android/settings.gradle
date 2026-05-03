@@ -22,23 +22,6 @@ plugins {
   id("expo-autolinking-settings")
 }
 
-dependencyResolutionManagement {
-  repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
-  repositories {
-    google()
-    mavenCentral()
-    maven {
-      url 'https://api.mapbox.com/downloads/v2/releases/maven'
-      authentication { basic(org.gradle.authentication.http.BasicAuthentication) }
-      credentials {
-        username = 'mapbox'
-        password = System.getenv('MAPBOX_DOWNLOADS_TOKEN') ?: ''
-      }
-    }
-    maven { url 'https://www.jitpack.io' }
-  }
-}
-
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
   if (System.getenv('EXPO_USE_COMMUNITY_AUTOLINKING') == '1') {
     ex.autolinkLibrariesFromCommand()
