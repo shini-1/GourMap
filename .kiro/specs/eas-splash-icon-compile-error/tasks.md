@@ -1,0 +1,129 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Bug Condition** - AAPT Fails to Compile Splash Icon Resource
+  - **CRITICAL**: This test MUST FAIL on unfixed code — failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior — it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bug exists in the current `assets/splash-icon.png` file
+  - **Scoped PBT Approach**: The bug is deterministic and reproducible — scope the property to the concrete failing case by inspecting the PNG file and triggering an EAS Build
+  - Inspect `assets/splash-icon.png` using PNG analysis tools:
+    - Run `pngcheck assets/splash-icon.png` and document any errors or warnings → **EXPECTED**: May report metadata issues or interlacing
+    - Run `exiftool assets/splash-icon.png` and document metadata chunks (ICC profile, gAMA, tEXt, interlacing) → **EXPECTED**: May show problematic metadata
+    - Run `file assets/splash-icon.png` and document PNG encoding details → **EXPECTED**: May show interlaced encoding
+  - Trigger an EAS Build for Android production (unfixed code):
+    - Run `eas build --profile production --platform android --non-interactive` (or inspect recent failed build logs)
+    - Capture the full error message from the `:app:mergeReleaseResources` task
+    - Confirm the error contains "AAPT: error: file failed to compile" and "drawable-mdpi/assets_splashicon.png"
+  - **EXPECTED OUTCOME**: PNG analysis reveals metadata or encoding issues; EAS Build fails with AAPT error
+  - Document counterexamples found:
+    - PNG metadata chunks present (e.g., ICC profile, gAMA)
+    - Interlaced encoding detected
+    - AAPT compilation failure in EAS Build logs
+  - Mark task complete when inspection is done, EAS Build failure is confirmed, and counterexamples are documented
+  - _Requirements: 1.1, 1.2, 1.3, 1.4_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Splash Screen Visual Appearance Unchanged
+  - **IMPORTANT**: Follow observation-first methodology — observe the UNFIXED splash screen behavior before writing assertions
+  - Observe on UNFIXED code (local development or previous successful build):
+    - Launch the app locally (or on a device with a previous working build)
+    - Take a screenshot of the splash screen
+    - Document the visual appearance: image content, background color, resize mode
+    - Verify `app.json` contains `expo.splash.image: "./assets/splash-icon.png"`, `expo.splash.resizeMode: "contain"`, `expo.splash.backgroundColor: "#ffffff"`
+  - Write property-based assertions capturing observed behavior:
+    - For any app launch after the fix: splash screen image content MUST visually match the screenshot from unfixed code
+    - For any app launch after the fix: splash screen background color MUST be `#ffffff` (white)
+    - For any app launch after the fix: splash screen resize mode MUST be `contain`
+    - For any build (iOS, web, local): splash screen MUST display correctly without AAPT errors
+  - Verify all assertions PASS on UNFIXED code (local development)
+  - **EXPECTED OUTCOME**: All assertions PASS (this confirms the baseline behavior to preserve)
+  - Mark task complete when assertions are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [x] 3. Fix `assets/splash-icon.png` — re-export or optimize to ensure AAPT compatibility
+
+  - [x] 3.1 Analyze PNG file to identify root cause
+    - Review the counterexamples from task 1 (PNG metadata, interlacing, AAPT error)
+    - Determine the most likely root cause:
+      - If `exiftool` shows ICC profile, gAMA, or tEXt chunks → metadata incompatibility
+      - If `file` shows interlaced encoding → interlacing issue
+      - If `pngcheck` reports errors → corruption or invalid structure
+    - Document the identified root cause
+    - _Bug_Condition: isBugCondition(buildRun) where AAPT fails on drawable-mdpi/assets_splashicon.png_
+    - _Expected_Behavior: PNG file is AAPT-compatible with minimal metadata and non-interlaced encoding_
+    - _Requirements: 2.1, 2.2_
+
+  - [x] 3.2 Re-export or optimize the PNG file
+    - **Approach 1 (Recommended)**: Re-export using an image editor
+      - Open `assets/splash-icon.png` in GIMP, Photoshop, or an online PNG editor
+      - Export as PNG with settings: no interlacing, no ICC profile, no metadata
+      - Save as `assets/splash-icon-new.png`
+    - **Approach 2 (Alternative)**: Optimize using command-line tools
+      - Install `pngcrush` or `optipng` (e.g., `brew install pngcrush`)
+      - Run `pngcrush -rem allb -reduce assets/splash-icon.png assets/splash-icon-new.png`
+      - Or run `optipng -o7 -strip all assets/splash-icon.png` (optimizes in-place)
+    - **Approach 3 (Fallback)**: Recreate from source
+      - Locate the original source file (PSD, AI, SVG) for the splash icon
+      - Export a new PNG at the required resolution with clean settings
+    - Verify the new PNG file:
+      - Run `pngcheck assets/splash-icon-new.png` → should report no errors
+      - Run `exiftool assets/splash-icon-new.png` → should show minimal metadata
+      - Run `file assets/splash-icon-new.png` → should show non-interlaced encoding
+    - Replace the original file: `mv assets/splash-icon-new.png assets/splash-icon.png`
+    - _Bug_Condition: isBugCondition(buildRun) where AAPT fails on splash icon resource_
+    - _Expected_Behavior: PNG file is AAPT-compatible and compiles successfully_
+    - _Preservation: Visual appearance of splash screen is unchanged_
+    - _Requirements: 2.2, 2.3_
+
+  - [x] 3.3 Test locally to ensure splash screen displays correctly
+    - Run `npx expo start` and launch the app on an Android emulator or device
+    - Verify the splash screen displays with the same visual appearance as before
+    - Take a screenshot and compare with the screenshot from task 2
+    - Confirm the image content, background color, and resize mode are unchanged
+    - _Preservation: Splash screen visual appearance is unchanged_
+    - _Requirements: 3.1, 3.5_
+
+  - [x] 3.4 Trigger an EAS Build and verify AAPT compilation succeeds
+    - Run `eas build --profile production --platform android --non-interactive --wait`
+    - Monitor the build logs and confirm `:app:mergeReleaseResources` completes without AAPT errors
+    - Confirm the build produces an APK artifact
+    - Download the APK and install it on an Android device or emulator
+    - Launch the app and verify the splash screen displays correctly
+    - _Bug_Condition: isBugCondition(buildRun) where AAPT fails on splash icon resource_
+    - _Expected_Behavior: EAS Build completes successfully and produces APK_
+    - _Requirements: 2.1, 2.3, 2.4_
+
+  - [x] 3.5 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - AAPT Successfully Compiles Splash Icon Resources
+    - **IMPORTANT**: Re-run the SAME inspection and build from task 1 — do NOT write new assertions
+    - The assertions from task 1 encode the expected behavior
+    - When these assertions pass, it confirms the expected behavior is satisfied
+    - Re-run PNG analysis tools on the fixed `assets/splash-icon.png`:
+      - `pngcheck assets/splash-icon.png` → should report no errors
+      - `exiftool assets/splash-icon.png` → should show minimal metadata
+      - `file assets/splash-icon.png` → should show non-interlaced encoding
+    - Confirm the EAS Build from step 3.4 completed successfully (no AAPT errors)
+    - **EXPECTED OUTCOME**: All assertions PASS (confirms bug is fixed)
+    - _Requirements: 2.1, 2.2, 2.3, 2.4_
+
+  - [x] 3.6 Verify preservation tests still pass
+    - **Property 2: Preservation** - Splash Screen Visual Appearance Unchanged
+    - **IMPORTANT**: Re-run the SAME assertions from task 2 — do NOT write new assertions
+    - Run all preservation assertions from task 2 against the fixed app:
+      - Launch the app locally and verify splash screen displays correctly
+      - Compare the splash screen screenshot with the screenshot from task 2 (should be visually identical)
+      - Verify `app.json` still contains the same `expo.splash` configuration
+    - Additionally verify: iOS and web builds still work correctly
+      - Trigger an EAS Build for iOS (optional) and confirm splash screen displays correctly
+      - Run `expo export --platform web` and confirm splash screen displays correctly
+    - **EXPECTED OUTCOME**: All assertions PASS (confirms no regressions)
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [x] 4. Checkpoint — Ensure all tests pass
+  - Re-run all assertions from tasks 1 and 2 against the final fixed `assets/splash-icon.png`
+  - Confirm all bug condition assertions now PASS (bug is fixed)
+  - Confirm all preservation assertions still PASS (no regressions)
+  - Confirm the EAS Build for Android production completes successfully and produces an APK
+  - Optionally: Install the APK on a physical Android device and verify the splash screen displays correctly
+  - Ensure all tests pass; ask the user if questions arise.
