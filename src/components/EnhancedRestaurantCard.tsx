@@ -3,12 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native
 import { Image } from 'expo-image';
 import { useTheme } from '../theme/ThemeContext';
 import { Restaurant } from '../types';
+import { resolveCategoryConfig } from '../config/categoryConfig';
 
-// Default GourMap placeholder image when no restaurant image is available
-const getPlaceholderImage = (): string => {
-  // Use GourMap logo/branding as default placeholder
-  return 'https://raw.githubusercontent.com/shini-1/GourMapExpo/main/assets/icon.png';
-};
+// Local placeholder image — bundled with the app, no network required
+const PLACEHOLDER_IMAGE = require('../../assets/icon.png');
+
+const getPlaceholderImage = () => PLACEHOLDER_IMAGE;
 
 interface EnhancedRestaurantCardProps {
   restaurant: Restaurant;
@@ -67,27 +67,21 @@ const EnhancedRestaurantCard: React.FC<EnhancedRestaurantCardProps> = ({
   const rating = typeof restaurant.rating === 'number' ? restaurant.rating : 0;
   const ratingText = rating > 0 ? rating.toFixed(1) : 'No ratings yet';
 
-  // Debug logging and validation for image display
-  const imageUri = restaurant.image && restaurant.image.trim() ? restaurant.image.trim() : getPlaceholderImage();
-  const isUsingPlaceholder = !restaurant.image || !restaurant.image.trim();
-  
-  useEffect(() => {
-    if (isUsingPlaceholder) {
-      console.log(`📷 Restaurant "${restaurant.name}" has no image, using placeholder`);
-    } else {
-      console.log(`📷 Restaurant "${restaurant.name}" image URL:`, restaurant.image);
-      console.log(`📷 Image URI (trimmed):`, imageUri);
-    }
-  }, [restaurant.image, restaurant.name, imageUri, isUsingPlaceholder]);
+  // Resolve category config for emoji + label display
+  const categoryConfig = resolveCategoryConfig(restaurant.category, restaurant.name);
+  const categoryDisplay = `${categoryConfig.emoji} ${categoryConfig.label}`;
+
+  // Use local placeholder when no image URL is available
+  const imageSource = (restaurant.image && restaurant.image.trim())
+    ? { uri: restaurant.image.trim() }
+    : getPlaceholderImage();
 
   return (
     <Animated.View style={[styles.container, { transform: [{ scale: animatedScale }] }]}>
       <TouchableOpacity onPress={handlePress} style={styles.card}>
         {/* Image */}
         <Image
-          source={{
-            uri: imageUri
-          }}
+          source={imageSource}
           style={styles.image}
           contentFit="cover"
           cachePolicy="memory-disk"
@@ -110,7 +104,7 @@ const EnhancedRestaurantCard: React.FC<EnhancedRestaurantCardProps> = ({
 
           {/* Category */}
           <Text style={styles.category}>
-            {restaurant.category || 'Restaurant'}
+            {categoryDisplay}
           </Text>
 
           {/* Rating Row */}

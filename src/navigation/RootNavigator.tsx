@@ -18,6 +18,7 @@ import EditMenuItemsScreen from '../screens/EditMenuItemsScreen';
 import PostPromoScreen from '../screens/PostPromoScreen';
 import LoginScreenNew from '../screens/LoginScreenNew';
 import RegisterScreenNew from '../screens/RegisterScreenNew';
+import AIChatScreen from '../screens/AIChatScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -44,6 +45,7 @@ const RootNavigator = () => {
       <Stack.Screen name="PostPromo" component={PostPromoScreen} />
       <Stack.Screen name="Login" component={LoginScreenNew} />
       <Stack.Screen name="Register" component={RegisterScreenNew} />
+      <Stack.Screen name="AIChat" component={AIChatScreen} />
     </Stack.Navigator>
   );
 };

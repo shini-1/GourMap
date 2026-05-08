@@ -1,6 +1,7 @@
 export type RootStackParamList = {
   RoleSelection: undefined;
   Home: undefined;
+  AIChat: undefined;
   BusinessPanel: undefined;
   AdminPanel: undefined;
   CreateAdmin: undefined;

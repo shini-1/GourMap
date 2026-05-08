@@ -312,6 +312,19 @@ const styles = StyleSheet.create({
     color: DESIGN_COLORS.textPrimary,
     marginLeft: 4,
   },
+  aiChatButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: DESIGN_COLORS.cardBackground,
+    borderWidth: 2,
+    borderColor: DESIGN_COLORS.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  aiChatButtonIcon: {
+    fontSize: 18,
+  },
   modalCloseButton: {
     marginTop: 15,
     paddingVertical: 12,
@@ -581,11 +594,10 @@ const styles = StyleSheet.create({
   },
 });
 
-// Default GourMap placeholder image when no restaurant image is available
-const getPlaceholderImage = (): string => {
-  // Use GourMap logo/branding as default placeholder
-  return 'https://raw.githubusercontent.com/shini-1/GourMapExpo/main/assets/icon.png';
-};
+// Local placeholder image — bundled with the app, no network required
+const PLACEHOLDER_IMAGE = require('../assets/icon.png');
+
+const getPlaceholderImage = () => PLACEHOLDER_IMAGE;
 
 function isValidHttpUrl(value?: string): boolean {
   if (!value) return false;
@@ -1041,7 +1053,7 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
             setHasMore(false);
           }
           
-          const more = (serverData?.length === SERVER_PAGE_SIZE) || (serverData && serverData.length > 0 && targetPage < 10); // Be more aggressive about loading up to page 10
+          const more = serverData?.length === SERVER_PAGE_SIZE;
           setHasMore(more);
           console.log(`✅ Loaded ${mergedData?.length || 0} restaurants from server + local, hasMore: ${more} (page ${targetPage})`);
           
@@ -1284,33 +1296,9 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
     hasMoreRef.current = hasMore;
   }, [hasMore]);
 
-  // Simplified auto-load logic - trigger when we have restaurants and more are available
-  useEffect(() => {
-    if (hasMore && !isLoadingPage && !refreshing && restaurants.length > 0 && restaurants.length % SERVER_PAGE_SIZE === 0) {
-      console.log(`🔄 Auto-loading next page. Current: ${restaurants.length} restaurants, hasMore: ${hasMore}, SERVER_PAGE_SIZE: ${SERVER_PAGE_SIZE}`);
-      console.log(`🔄 Condition met: restaurants.length % SERVER_PAGE_SIZE === 0 (${restaurants.length} % ${SERVER_PAGE_SIZE} = ${restaurants.length % SERVER_PAGE_SIZE})`);
-
-      const nextPage = Math.floor(restaurants.length / SERVER_PAGE_SIZE) + 1;
-      console.log(`📄 Loading page ${nextPage} automatically`);
-
-      loadPage(nextPage).catch(error => {
-        console.error('❌ Auto-load failed:', error);
-      });
-    } else if (restaurants.length > 0 && restaurants.length % SERVER_PAGE_SIZE === 0 && !hasMore) {
-      // Check if we should attempt to load more even if hasMore is false
-      // This handles cases where the server initially said no more but actually has more
-      console.log(`🔍 Checking for more restaurants despite hasMore=false. Current: ${restaurants.length} restaurants`);
-
-      const nextPage = Math.floor(restaurants.length / SERVER_PAGE_SIZE) + 1;
-      console.log(`📄 Attempting to load page ${nextPage} to check for more restaurants`);
-
-      loadPage(nextPage).catch(error => {
-        console.log('ℹ️ No more restaurants available (expected):', error?.message || error);
-      });
-    } else if (restaurants.length > 0) {
-      console.log(`⏸️ Auto-load skipped: hasMore=${hasMore}, isLoadingPage=${isLoadingPage}, refreshing=${refreshing}, length=${restaurants.length}, mod=${restaurants.length % SERVER_PAGE_SIZE}`);
-    }
-  }, [restaurants.length, hasMore, isLoadingPage, refreshing, loadPage]);
+  // Simplified auto-load logic — disabled: onEndReached handles pagination
+  // The previous useEffect was firing continuously because restaurants.length % SERVER_PAGE_SIZE === 0
+  // is always true after each full page load, causing infinite re-fetches.
 
   useEffect(() => {
     const previousCount = previousRestaurantCountRef.current;
@@ -1383,7 +1371,7 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
             name: restaurant.name,
             location: restaurant.location || { latitude: 0, longitude: 0 },
             image: restaurant.image,
-            category: categoryConfig.name, // Override with resolved category
+            category: restaurant.category || categoryConfig.name, // Keep original DB value; card resolves display
             rating: restaurant.rating,
             priceRange: restaurant.priceRange,
             description: restaurant.description,
@@ -1486,7 +1474,7 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
       
       if (sortBy === 'highest' || sortBy === 'lowest' || sortBy === 'trending' || sortBy === 'mostReviewed') {
         // Use rating calculation service for sorting
-        sortedRestaurants = ratingCalculationService.sortRestaurantsByRating(restaurants, sortBy);
+        sortedRestaurants = ratingCalculationService.sortRestaurantsByRating(restaurants, sortBy) as CategorizedRestaurant[];
       } else if (sortBy === 'newest') {
         // Sort by newest (would need timestamp data - using reverse order for now)
         sortedRestaurants.reverse();
@@ -1728,6 +1716,15 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
           </Text>
           <Text style={styles.categoryDropdownArrow}>▼</Text>
         </TouchableOpacity>
+
+        {/* AI Chat button */}
+        <TouchableOpacity
+          style={styles.aiChatButton}
+          onPress={() => navigation.navigate('AIChat')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.aiChatButtonIcon}>🤖</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Category Filter Modal */}
@@ -1858,17 +1855,13 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
         refreshing={refreshing}
         onRefresh={onRefresh}
         onEndReached={() => {
-          // More aggressive continuous loading
-          if (isLoadingPage || refreshing) return;
-
-          if (hasMore && restaurants.length > 0) {
-            console.log(`🔄 Continuous loading: ${restaurants.length} restaurants loaded, loading more...`);
-            setServerPage((sp) => {
-              const next = sp + 1;
-              loadPage(next);
-              return next;
-            });
-          }
+          if (isLoadingPage || refreshing || !hasMore) return;
+          const nextPage = Math.floor(restaurants.length / SERVER_PAGE_SIZE) + 1;
+          console.log(`🔄 onEndReached: loading page ${nextPage} (${restaurants.length} loaded so far)`);
+          setServerPage(nextPage);
+          loadPage(nextPage).catch(error => {
+            console.error('❌ onEndReached load failed:', error);
+          });
         }}
         onEndReachedThreshold={0.3} // Increased from 0.1 to 0.3 for smoother continuous loading
         initialNumToRender={20}
