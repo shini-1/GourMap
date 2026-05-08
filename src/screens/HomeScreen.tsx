@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
 });
 
 // Local placeholder image — bundled with the app, no network required
-const PLACEHOLDER_IMAGE = require('../assets/icon.png');
+const PLACEHOLDER_IMAGE = require('../../assets/icon.png');
 
 const getPlaceholderImage = () => PLACEHOLDER_IMAGE;
 
