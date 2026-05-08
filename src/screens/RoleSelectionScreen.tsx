@@ -187,7 +187,7 @@ function RoleSelectionScreen({ navigation }: { navigation: any }) {
           <View style={styles.bottomSection}>
             {/* Welcome Text */}
             <Text style={styles.welcomeText}>Welcome to GourMap!</Text>
-            <Text style={styles.modalSubtitle}>Discover hidden culinary gems</Text>
+            <Text style={styles.modalSubtitle}>Discover hidden culinary gems in Kalibo.</Text>
 
             {/* Food Explorer Button */}
             <TouchableOpacity
