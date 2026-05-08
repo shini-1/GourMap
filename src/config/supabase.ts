@@ -27,6 +27,12 @@ export const BUCKETS = {
 // Use Edge Functions for admin operations in production (recommended)
 export const USE_EDGE_FUNCTIONS: boolean = (process.env.EXPO_PUBLIC_USE_EDGE_FUNCTIONS === 'true');
 
+if (!SUPABASE_CONFIG.url || !SUPABASE_CONFIG.anonKey) {
+  throw new Error(
+    'Missing Supabase configuration. EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY must be set.'
+  );
+}
+
 export const supabase: SupabaseClient = createClient(
   SUPABASE_CONFIG.url,
   SUPABASE_CONFIG.anonKey
