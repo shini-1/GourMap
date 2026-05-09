@@ -4,8 +4,10 @@ import { supabase } from '../config/supabase';
 import { businessOwnerAuthService, BusinessOwnerProfile } from '../services/businessOwnerAuthService';
 import { adminAuthService, AdminProfile } from '../services/adminAuthService';
 import { offlineAuthService } from '../services/offlineAuthService';
+import { userProfileService, UserProfile } from '../services/userProfileService';
 
 interface AuthContextType {
+  // Business owner / admin user (existing)
   user: User | null;
   setUser: (user: User | null) => void;
   login: (email: string, password: string) => Promise<void>;
@@ -14,12 +16,20 @@ interface AuthContextType {
   loginAsBusinessOwner: (email: string, password: string) => Promise<void>;
   signupAsBusinessOwner: (signUpData: any) => Promise<void>;
   loginAsAdmin: (email: string, password: string) => Promise<void>;
+
+  // Food Explorer user (new)
+  explorerUser: UserProfile | null;
+  setExplorerUser: (profile: UserProfile | null) => void;
+  logoutExplorer: () => Promise<void>;
+  isRestoringSession: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [explorerUser, setExplorerUser] = useState<UserProfile | null>(null);
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
 
   useEffect(() => {
     // Initialize offline auth service
@@ -27,25 +37,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to initialize offline auth:', error);
     });
 
-    // Simplified: No automatic auth state listening to avoid initialization issues
-    // Auth state will be managed manually through login/logout calls
-    console.log('✅ AuthContext initialized (simplified mode)');
+    // Restore Food Explorer session from persisted Supabase token
+    const restoreExplorerSession = async () => {
+      try {
+        const profile = await userProfileService.restoreSession();
+        if (profile) {
+          setExplorerUser(profile);
+          console.log('✅ Explorer session restored for:', profile.email);
+        }
+      } catch (err) {
+        console.warn('⚠️ Could not restore explorer session:', err);
+      } finally {
+        setIsRestoringSession(false);
+      }
+    };
+
+    restoreExplorerSession();
+    console.log('✅ AuthContext initialized');
   }, []);
+
+  // ── Business owner / admin auth (unchanged) ─────────────────────────────────
 
   const login = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
-      // Check if this is a business owner by looking up their profile
       try {
         const businessProfile = await businessOwnerAuthService.getCurrentUser();
         if (businessProfile) {
-          // This is a business owner
           setUser({
             uid: businessProfile.uid,
             email: businessProfile.email,
@@ -57,15 +77,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
           return;
         }
-      } catch (businessError) {
-        console.log('Not a business owner account');
-      }
+      } catch { /* not a business owner */ }
 
-      // Check if this is an admin by looking up their profile
       try {
         const adminProfile = await adminAuthService.getCurrentUser();
         if (adminProfile) {
-          // This is an admin
           setUser({
             uid: adminProfile.uid,
             email: adminProfile.email,
@@ -75,17 +91,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
           return;
         }
-      } catch (adminError) {
-        console.log('Not an admin account');
-      }
+      } catch { /* not an admin */ }
 
-      // Fallback for regular users (existing users without business/admin profiles)
       if (data.user) {
-        setUser({
-          uid: data.user.id,
-          email: data.user.email || '',
-          role: 'user',
-        });
+        setUser({ uid: data.user.id, email: data.user.email || '', role: 'user' });
       }
     } catch (error) {
       throw error;
@@ -93,53 +102,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signup = async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      // For new users, just create the account - they can log in after
-      console.log('✅ User account created successfully');
-    } catch (error) {
-      throw error;
-    }
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
   };
 
   const loginAsBusinessOwner = async (email: string, password: string) => {
-    try {
-      await businessOwnerAuthService.signIn(email, password);
-    } catch (error) {
-      throw error;
-    }
+    await businessOwnerAuthService.signIn(email, password);
   };
 
   const signupAsBusinessOwner = async (signUpData: any) => {
-    try {
-      await businessOwnerAuthService.signUp(signUpData);
-    } catch (error) {
-      throw error;
-    }
+    await businessOwnerAuthService.signUp(signUpData);
   };
 
   const loginAsAdmin = async (email: string, password: string) => {
-    try {
-      await adminAuthService.signIn(email, password);
-    } catch (error) {
-      throw error;
-    }
+    await adminAuthService.signIn(email, password);
   };
 
   const logout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      setUser(null);
-    } catch (error) {
-      throw error;
-    }
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    setUser(null);
+  };
+
+  // ── Food Explorer auth ───────────────────────────────────────────────────────
+
+  const logoutExplorer = async () => {
+    await userProfileService.signOut();
+    setExplorerUser(null);
   };
 
   return (
@@ -151,7 +140,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout,
       loginAsBusinessOwner,
       signupAsBusinessOwner,
-      loginAsAdmin
+      loginAsAdmin,
+      explorerUser,
+      setExplorerUser,
+      logoutExplorer,
+      isRestoringSession,
     }}>
       {children}
     </AuthContext.Provider>
@@ -160,8 +153,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 }

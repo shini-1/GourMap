@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Image } from 'expo-image';
 import { useTheme } from '../theme/ThemeContext';
 import { Restaurant } from '../types';
 import { resolveCategoryConfig } from '../config/categoryConfig';
+import { favoritesService } from '../services/favoritesService';
+import { useAuth } from './AuthContext';
 
 // Local placeholder image — bundled with the app, no network required
 const PLACEHOLDER_IMAGE = require('../../assets/icon.png');
-
-const getPlaceholderImage = () => PLACEHOLDER_IMAGE;
 
 interface EnhancedRestaurantCardProps {
   restaurant: Restaurant;
@@ -17,68 +17,77 @@ interface EnhancedRestaurantCardProps {
   showRanking?: boolean;
   ratingData?: any;
   navigation?: any;
-  parsedAddress?: string; // Add parsed address prop
+  parsedAddress?: string;
 }
 
 const EnhancedRestaurantCard: React.FC<EnhancedRestaurantCardProps> = ({
   restaurant,
   onPress,
-  showSyncStatus = true,
-  showRanking = true,
-  ratingData,
-  navigation,
-  parsedAddress
+  parsedAddress,
 }) => {
-  const { theme } = useTheme();
+  const { explorerUser } = useAuth();
   const [animatedScale] = useState(new Animated.Value(1));
+  const [heartScale]    = useState(new Animated.Value(1));
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favLoading, setFavLoading]   = useState(false);
 
-  // Animate on mount
+  // Load favorite state when user is logged in
   useEffect(() => {
-    Animated.spring(animatedScale, {
-      toValue: 1,
-      useNativeDriver: true,
-      tension: 100,
-      friction: 8,
-    }).start();
-  }, []);
+    if (!explorerUser) { setIsFavorited(false); return; }
+    favoritesService.isFavorited(explorerUser.id, restaurant.id)
+      .then(setIsFavorited)
+      .catch(() => {});
+  }, [explorerUser, restaurant.id]);
 
-  const renderStars = (rating: number): string => {
-    const safeRating = (typeof rating === 'number' && !isNaN(rating)) ? rating : 0;
-    const fullStars = Math.floor(safeRating);
-    return '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars);
-  };
+  const handleFavoriteToggle = useCallback(async (e: any) => {
+    e.stopPropagation?.();
+    if (!explorerUser || favLoading) return;
+
+    // Optimistic update
+    const next = !isFavorited;
+    setIsFavorited(next);
+
+    // Bounce animation
+    Animated.sequence([
+      Animated.timing(heartScale, { toValue: 1.4, duration: 120, useNativeDriver: true }),
+      Animated.timing(heartScale, { toValue: 1,   duration: 120, useNativeDriver: true }),
+    ]).start();
+
+    setFavLoading(true);
+    try {
+      await favoritesService.toggleFavorite(explorerUser.id, restaurant.id, !next);
+    } catch {
+      setIsFavorited(!next); // revert on error
+    } finally {
+      setFavLoading(false);
+    }
+  }, [explorerUser, isFavorited, favLoading, restaurant.id, heartScale]);
 
   const handlePress = () => {
     Animated.sequence([
-      Animated.timing(animatedScale, {
-        toValue: 0.98,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(animatedScale, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
+      Animated.timing(animatedScale, { toValue: 0.98, duration: 100, useNativeDriver: true }),
+      Animated.timing(animatedScale, { toValue: 1,    duration: 100, useNativeDriver: true }),
     ]).start();
     onPress();
   };
 
+  const renderStars = (rating: number): string => {
+    const safe = (typeof rating === 'number' && !isNaN(rating)) ? rating : 0;
+    const full = Math.floor(safe);
+    return '★'.repeat(full) + '☆'.repeat(5 - full);
+  };
+
   const rating = typeof restaurant.rating === 'number' ? restaurant.rating : 0;
   const ratingText = rating > 0 ? rating.toFixed(1) : 'No ratings yet';
-
-  // Resolve category config for emoji + label display
   const categoryConfig = resolveCategoryConfig(restaurant.category, restaurant.name);
   const categoryDisplay = `${categoryConfig.emoji} ${categoryConfig.label}`;
-
-  // Use local placeholder when no image URL is available
   const imageSource = (restaurant.image && restaurant.image.trim())
     ? { uri: restaurant.image.trim() }
-    : getPlaceholderImage();
+    : PLACEHOLDER_IMAGE;
 
   return (
     <Animated.View style={[styles.container, { transform: [{ scale: animatedScale }] }]}>
-      <TouchableOpacity onPress={handlePress} style={styles.card}>
+      <TouchableOpacity onPress={handlePress} style={styles.card} activeOpacity={0.9}>
         {/* Image */}
         <Image
           source={imageSource}
@@ -94,7 +103,23 @@ const EnhancedRestaurantCard: React.FC<EnhancedRestaurantCardProps> = ({
             <Text style={styles.title} numberOfLines={2}>
               {restaurant.name}
             </Text>
-            <Text style={styles.heart}>🤍</Text>
+
+            {/* Heart button — only shown when logged in */}
+            {explorerUser ? (
+              <TouchableOpacity
+                onPress={handleFavoriteToggle}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                disabled={favLoading}
+              >
+                <Animated.Text
+                  style={[styles.heart, { transform: [{ scale: heartScale }] }]}
+                >
+                  {isFavorited ? '❤️' : '🤍'}
+                </Animated.Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.heart}>🤍</Text>
+            )}
           </View>
 
           {/* Location */}
@@ -103,9 +128,7 @@ const EnhancedRestaurantCard: React.FC<EnhancedRestaurantCardProps> = ({
           </Text>
 
           {/* Category */}
-          <Text style={styles.category}>
-            {categoryDisplay}
-          </Text>
+          <Text style={styles.category}>{categoryDisplay}</Text>
 
           {/* Rating Row */}
           <View style={styles.ratingRow}>
@@ -164,7 +187,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   heart: {
-    fontSize: 16,
+    fontSize: 18,
     marginLeft: 6,
   },
   location: {

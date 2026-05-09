@@ -12,10 +12,12 @@ import {
   Animated,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { aiChatService, ChatMessage, ChatSession } from '../services/aiChatService';
+import { aiChatService, ChatMessage, ChatSession, PersonalizationContext } from '../services/aiChatService';
 import { restaurantService } from '../services/restaurantService';
+import { favoritesService } from '../services/favoritesService';
 import { Restaurant } from '../types';
 import { resolveCategoryConfig } from '../config/categoryConfig';
+import { useAuth } from '../components/AuthContext';
 
 const PLACEHOLDER_IMAGE = require('../../assets/icon.png');
 
@@ -226,27 +228,44 @@ function SuggestionChips({ onSelect }: { onSelect: (text: string) => void }) {
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function AIChatScreen({ navigation }: { navigation: any }) {
+  const { explorerUser } = useAuth();
   const [session, setSession] = useState<ChatSession | null>(null);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isLoadingRestaurants, setIsLoadingRestaurants] = useState(true);
+  const [personalization, setPersonalization] = useState<PersonalizationContext | undefined>();
   const flatListRef = useRef<FlatList>(null);
 
-  // Load restaurants once on mount
+  // Load restaurants and personalization context on mount
   useEffect(() => {
     const load = async () => {
       try {
         const restaurants = await restaurantService.getAllRestaurants();
-        setSession(aiChatService.createSession(restaurants));
+
+        let ctx: PersonalizationContext | undefined;
+        if (explorerUser) {
+          const [prefs, favIds] = await Promise.all([
+            favoritesService.getPreferences(explorerUser.id),
+            favoritesService.getFavoriteIds(explorerUser.id),
+          ]);
+          ctx = {
+            preferredCategories: prefs,
+            favoriteRestaurantIds: favIds,
+            displayName: explorerUser.displayName,
+          };
+          setPersonalization(ctx);
+        }
+
+        setSession(aiChatService.createSession(restaurants, ctx));
       } catch (err) {
-        console.error('AIChatScreen: failed to load restaurants', err);
+        console.error('AIChatScreen: failed to load', err);
         setSession(aiChatService.createSession([]));
       } finally {
         setIsLoadingRestaurants(false);
       }
     };
     load();
-  }, []);
+  }, [explorerUser]);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -278,7 +297,8 @@ export default function AIChatScreen({ navigation }: { navigation: any }) {
       const { text: responseText, restaurants } = await aiChatService.chat(
         content,
         session.context.restaurants,
-        session.messages
+        session.messages,
+        personalization
       );
 
       const aiMsg: ChatMessage = {

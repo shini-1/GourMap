@@ -19,6 +19,10 @@ import PostPromoScreen from '../screens/PostPromoScreen';
 import LoginScreenNew from '../screens/LoginScreenNew';
 import RegisterScreenNew from '../screens/RegisterScreenNew';
 import AIChatScreen from '../screens/AIChatScreen';
+import ExplorerProfileScreen from '../screens/ExplorerProfileScreen';
+import FavoritesScreen from '../screens/FavoritesScreen';
+import RatingHistoryScreen from '../screens/RatingHistoryScreen';
+import OnboardingPreferencesScreen from '../screens/OnboardingPreferencesScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -46,6 +50,30 @@ const RootNavigator = () => {
       <Stack.Screen name="Login" component={LoginScreenNew} />
       <Stack.Screen name="Register" component={RegisterScreenNew} />
       <Stack.Screen name="AIChat" component={AIChatScreen} />
+      <Stack.Screen name="ExplorerProfile" component={ExplorerProfileScreen} />
+      <Stack.Screen name="Favorites" component={FavoritesScreen} />
+      <Stack.Screen name="RatingHistory" component={RatingHistoryScreen} />
+      <Stack.Screen
+        name="OnboardingPreferences"
+        component={({ route, navigation }: any) => (
+          <OnboardingPreferencesScreen
+            userId={route.params.userId}
+            onComplete={() => {
+              // After onboarding, go to Home and clear the onboarding screen from the stack
+              navigation.reset({
+                index: 1,
+                routes: [{ name: 'RoleSelection' }, { name: 'Home' }],
+              });
+            }}
+            onSkip={() => {
+              navigation.reset({
+                index: 1,
+                routes: [{ name: 'RoleSelection' }, { name: 'Home' }],
+              });
+            }}
+          />
+        )}
+      />
     </Stack.Navigator>
   );
 };

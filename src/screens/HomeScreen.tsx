@@ -7,6 +7,7 @@ import {
   TextInput,
   Modal,
   FlatList,
+  ScrollView,
   Alert,
   ActivityIndicator,
 } from 'react-native';
@@ -29,6 +30,8 @@ import { cacheStatusService } from '../services/cacheStatusService';
 import { ratingSyncService } from '../services/ratingSyncService';
 import { ratingCalculationService, RestaurantRatingData } from '../services/ratingCalculationService';
 import { useNetwork } from '../contexts/NetworkContext';
+import { useAuth } from '../components/AuthContext';
+import { favoritesService } from '../services/favoritesService';
 import { syncService } from '../services/syncService';
 import { localDatabase } from '../services/localDatabase';
 import { Restaurant } from '../types';
@@ -609,6 +612,100 @@ function isValidHttpUrl(value?: string): boolean {
   }
 }
 
+// ── For You Section ───────────────────────────────────────────────────────────
+
+function ForYouSection({
+  restaurants,
+  preferredCategories,
+  onPress,
+}: {
+  restaurants: any[];
+  preferredCategories: string[];
+  onPress: (r: any) => void;
+}) {
+  const preferred = new Set(preferredCategories);
+  const picks = restaurants
+    .filter(r => preferred.has((r.category || '').toLowerCase()))
+    .slice(0, 8);
+
+  if (picks.length === 0) return null;
+
+  return (
+    <View style={forYouStyles.container}>
+      <Text style={forYouStyles.title}>✨ For You</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={forYouStyles.row}>
+        {picks.map(r => {
+          const cat = resolveCategoryConfig(r.category, r.name);
+          const rating = typeof r.rating === 'number' ? r.rating : 0;
+          const src = r.image?.trim() ? { uri: r.image.trim() } : PLACEHOLDER_IMAGE;
+          return (
+            <TouchableOpacity key={r.id} style={forYouStyles.card} onPress={() => onPress(r)} activeOpacity={0.85}>
+              <Image source={src} style={forYouStyles.image} contentFit="cover" cachePolicy="memory-disk" />
+              <Text style={forYouStyles.name} numberOfLines={2}>{r.name}</Text>
+              <Text style={forYouStyles.cat}>{cat.emoji} {cat.label}</Text>
+              {rating > 0 && <Text style={forYouStyles.rating}>⭐ {rating.toFixed(1)}</Text>}
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+const forYouStyles = StyleSheet.create({
+  container: {
+    marginBottom: 8,
+    paddingTop: 8,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#000000',
+    marginLeft: 16,
+    marginBottom: 10,
+  },
+  row: {
+    paddingHorizontal: 12,
+    gap: 10,
+  },
+  card: {
+    width: 130,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#000000',
+    overflow: 'hidden',
+  },
+  image: {
+    width: '100%',
+    height: 80,
+    backgroundColor: '#F0F0F0',
+  },
+  name: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#000000',
+    paddingHorizontal: 8,
+    paddingTop: 6,
+    lineHeight: 16,
+  },
+  cat: {
+    fontSize: 10,
+    color: '#666666',
+    paddingHorizontal: 8,
+    paddingTop: 2,
+  },
+  rating: {
+    fontSize: 10,
+    color: '#666666',
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+    paddingTop: 2,
+  },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
   console.log('🏠 HomeScreen: Component starting...');
   
@@ -662,6 +759,7 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
   }
   
   const { isOnline } = useNetwork();
+  const { explorerUser } = useAuth();
   
   // Initialize crash logger with fallback
   const [crashLoggerReady, setCrashLoggerReady] = useState(false);
@@ -715,6 +813,7 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
     const [sortBy, setSortBy] = useState<SortOption>('highest');
     const [restaurantRatings, setRestaurantRatings] = useState<Map<string, RestaurantRatingData>>(new Map());
     const [isProcessingRatings, setIsProcessingRatings] = useState(false);
+    const [userPreferredCategories, setUserPreferredCategories] = useState<string[]>([]);
 
     console.log('🏠 HomeScreen: State initialized successfully');
     if (crashLoggerReady && crashLogger && typeof crashLogger.logComponentEvent === 'function') {
@@ -767,6 +866,14 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
       
       initRatingServices();
     }, []);
+
+    // Load user's preferred categories for personalized sorting
+    useEffect(() => {
+      if (!explorerUser) { setUserPreferredCategories([]); return; }
+      favoritesService.getPreferences(explorerUser.id)
+        .then((prefs: string[]) => setUserPreferredCategories(prefs || []))
+        .catch(() => {});
+    }, [explorerUser]);
 
     // Initialize sync service for offline data — only when HomeScreen is focused
     // (prevents localDatabase from initializing while on business owner screens)
@@ -1466,33 +1573,41 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
       !restaurant || typeof restaurant.rating !== 'number' || restaurant.rating <= 0
     );
 
-    console.log(`📊 Sorting ${restaurantsWithRatings.length} rated restaurants and ${restaurantsWithoutRatings.length} unrated restaurants`);
-
     // Function to apply sorting to a restaurant array
     const applySorting = (restaurants: CategorizedRestaurant[]): CategorizedRestaurant[] => {
       let sortedRestaurants = [...restaurants];
       
       if (sortBy === 'highest' || sortBy === 'lowest' || sortBy === 'trending' || sortBy === 'mostReviewed') {
-        // Use rating calculation service for sorting
         sortedRestaurants = ratingCalculationService.sortRestaurantsByRating(restaurants, sortBy) as CategorizedRestaurant[];
       } else if (sortBy === 'newest') {
-        // Sort by newest (would need timestamp data - using reverse order for now)
         sortedRestaurants.reverse();
       } else if (sortBy === 'name') {
-        // Sort alphabetically
         sortedRestaurants.sort((a, b) => a.name.localeCompare(b.name));
       }
 
       return sortedRestaurants;
     };
 
-    // Apply sorting to each group separately
-    const sortedWithRatings = applySorting(restaurantsWithRatings);
+    const sortedWithRatings    = applySorting(restaurantsWithRatings);
     const sortedWithoutRatings = applySorting(restaurantsWithoutRatings);
+    const combined = [...sortedWithRatings, ...sortedWithoutRatings];
 
-    // Combine groups with rated restaurants first
-    return [...sortedWithRatings, ...sortedWithoutRatings];
-  }, [filteredRestaurants, sortBy]);
+    // Personalized boost: if the user has preferred categories, float matching
+    // restaurants to the top (only when no explicit category filter is active)
+    if (userPreferredCategories.length > 0 && selectedCategory === 'all') {
+      const preferred = new Set(userPreferredCategories);
+      const boosted: CategorizedRestaurant[] = [];
+      const rest: CategorizedRestaurant[] = [];
+      for (const r of combined) {
+        const cat = (r.category || '').toLowerCase();
+        if (preferred.has(cat)) boosted.push(r);
+        else rest.push(r);
+      }
+      return [...boosted, ...rest];
+    }
+
+    return combined;
+  }, [filteredRestaurants, sortBy, userPreferredCategories, selectedCategory]);
 
   useEffect(() => {
     const h = setTimeout(() => {
@@ -1725,6 +1840,17 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
         >
           <Text style={styles.aiChatButtonIcon}>🤖</Text>
         </TouchableOpacity>
+
+        {/* Profile button — only shown when logged in as explorer */}
+        {explorerUser && (
+          <TouchableOpacity
+            style={styles.aiChatButton}
+            onPress={() => navigation.navigate('ExplorerProfile')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.aiChatButtonIcon}>👤</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Category Filter Modal */}
@@ -1874,6 +2000,15 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
               {restaurants.length === 0 ? 'No restaurants loaded yet' : 'No restaurants match your search'}
             </Text>
           </View>
+        }
+        ListHeaderComponent={
+          explorerUser && userPreferredCategories.length > 0 && selectedCategory === 'all' && !debouncedSearchText ? (
+            <ForYouSection
+              restaurants={visibleRestaurants}
+              preferredCategories={userPreferredCategories}
+              onPress={(r) => navigation.navigate('RestaurantDetail', { restaurantId: r.id, restaurant: r })}
+            />
+          ) : null
         }
         ListFooterComponent={renderListFooter}
       />

@@ -1,10 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { useTheme } from '../theme/ThemeContext';
+import { useAuth } from '../components/AuthContext';
 import LoginScreenNew from './LoginScreenNew';
 import RegisterScreenNew from './RegisterScreenNew';
 import AdminLoginScreen from './AdminLoginScreen';
+import ExplorerAuthScreen from './ExplorerAuthScreen';
 
 // Design colors matching the Home Screen exactly
 const DESIGN_COLORS = {
@@ -21,33 +23,54 @@ const DESIGN_COLORS = {
 
 function RoleSelectionScreen({ navigation }: { navigation: any }) {
   const { theme } = useTheme();
+  const { explorerUser, setExplorerUser, logoutExplorer } = useAuth();
   const [showBusinessModal, setShowBusinessModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
+  const [showExplorerAuth, setShowExplorerAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   
   // Long press handling for secret admin access (10 seconds)
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const [isLongPressing, setIsLongPressing] = useState(false);
 
-  const handleRoleSelect = (role: string) => {
-    console.log('🔍 handleRoleSelect called with role:', role);
-    console.log('🔍 Current state - showBusinessModal:', showBusinessModal, 'showAdminModal:', showAdminModal);
+  const handleExplorerPress = () => {
+    if (explorerUser) {
+      // Already logged in — go straight to Home
+      navigation.navigate('Home');
+    } else {
+      // Show auth modal
+      setShowExplorerAuth(true);
+    }
+  };
 
+  const handleExplorerLogout = () => {
+    Alert.alert(
+      'Log Out',
+      `Log out of ${explorerUser?.displayName || explorerUser?.email}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            await logoutExplorer();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRoleSelect = (role: string) => {
     switch (role) {
       case 'explorer':
-        console.log('🔍 Navigating to Home');
-        navigation.navigate('Home');
+        handleExplorerPress();
         break;
       case 'business':
-        console.log('🔍 Setting showBusinessModal to true');
         setAuthMode('login');
         setShowBusinessModal(true);
         break;
       case 'admin':
-        console.log('🔍 Setting showAdminModal to true');
         setShowAdminModal(true);
-        break;
-      default:
         break;
     }
   };
@@ -121,15 +144,32 @@ function RoleSelectionScreen({ navigation }: { navigation: any }) {
 
   return (
     <View style={styles.mainContainer}>
-      {/* Modal overlays - positioned absolutely over the entire screen */}
-      {(showBusinessModal || showAdminModal) && (
+      {/* Modal overlays */}
+      {(showBusinessModal || showAdminModal || showExplorerAuth) && (
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContainer, { backgroundColor: theme?.background || '#FFFFFF' }]}>
             {(() => {
-              console.log('🔍 Modal rendering:', { showBusinessModal, showAdminModal, authMode });
               try {
-                if (showBusinessModal) {
-                  console.log('🔍 Rendering business modal with authMode:', authMode);
+                if (showExplorerAuth) {
+                  return (
+                    <ExplorerAuthScreen
+                      onClose={() => setShowExplorerAuth(false)}
+                      onSuccess={(profile, isNewUser) => {
+                        setExplorerUser(profile);
+                        setShowExplorerAuth(false);
+                        if (isNewUser) {
+                          // New user — show onboarding preferences first
+                          navigation.navigate('OnboardingPreferences', {
+                            userId: profile.id,
+                            isEditing: false,
+                          });
+                        } else {
+                          navigation.navigate('Home');
+                        }
+                      }}
+                    />
+                  );
+                } else if (showBusinessModal) {
                   return authMode === 'login' ? (
                     <LoginScreenNew
                       navigation={navigation}
@@ -145,7 +185,6 @@ function RoleSelectionScreen({ navigation }: { navigation: any }) {
                     />
                   );
                 } else {
-                  console.log('🔍 Rendering admin modal');
                   return (
                     <AdminLoginScreen
                       navigation={navigation}
@@ -155,13 +194,9 @@ function RoleSelectionScreen({ navigation }: { navigation: any }) {
                   );
                 }
               } catch (error) {
-                console.error('Modal render error:', error);
                 return (
                   <View style={{ padding: 20, alignItems: 'center', backgroundColor: 'white' }}>
                     <Text style={{ color: 'red', fontSize: 16 }}>Error loading modal</Text>
-                    <Text style={{ color: 'red', fontSize: 12, marginTop: 10 }}>
-                      {error instanceof Error ? error.message : 'Unknown error'}
-                    </Text>
                   </View>
                 );
               }
@@ -171,9 +206,9 @@ function RoleSelectionScreen({ navigation }: { navigation: any }) {
       )}
 
       {/* Normal role selection content */}
-      {!showBusinessModal && !showAdminModal && (
+      {!showBusinessModal && !showAdminModal && !showExplorerAuth && (
         <>
-          {/* Top Section - Light Gray Background with Logo */}
+          {/* Top Section - Logo */}
           <View style={styles.topSection}>
             <Image
               source={require('../../assets/splash-icon.png')}
@@ -183,30 +218,62 @@ function RoleSelectionScreen({ navigation }: { navigation: any }) {
             />
           </View>
 
-          {/* Bottom Section - Dark Navy Background with Content */}
+          {/* Bottom Section */}
           <View style={styles.bottomSection}>
-            {/* Welcome Text */}
             <Text style={styles.welcomeText}>Welcome to GourMap!</Text>
             <Text style={styles.modalSubtitle}>Discover hidden culinary gems in Kalibo.</Text>
 
             {/* Food Explorer Button */}
-            <TouchableOpacity
-              style={styles.roleButton}
-              onPress={() => handleRoleSelect('explorer')}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.roleButtonText}>Food Explorer</Text>
-            </TouchableOpacity>
+            <View style={styles.explorerButtonWrapper}>
+              <TouchableOpacity
+                style={styles.roleButton}
+                onPress={() => handleRoleSelect('explorer')}
+                activeOpacity={0.8}
+              >
+                {explorerUser ? (
+                  <View style={styles.explorerLoggedIn}>
+                    <Text style={styles.explorerGreeting}>
+                      👋 {explorerUser.displayName || explorerUser.email.split('@')[0]}
+                    </Text>
+                    <Text style={styles.explorerSubtext}>Tap to explore</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.roleButtonText}>Food Explorer</Text>
+                )}
+              </TouchableOpacity>
 
-            {/* Business Owners Button - with secret 10s long press for admin */}
-            <TouchableOpacity
-              style={styles.roleButton}
-              onPressIn={handleBusinessPressIn}
-              onPressOut={handleBusinessPressOut}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.roleButtonText}>Business Owners</Text>
-            </TouchableOpacity>
+              {/* Profile + Logout buttons — only shown when logged in */}
+              {explorerUser && (
+                <View style={styles.explorerActions}>
+                  <TouchableOpacity
+                    style={styles.profileBtn}
+                    onPress={() => navigation.navigate('ExplorerProfile')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.profileBtnText}>👤</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.logoutBtn}
+                    onPress={handleExplorerLogout}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.logoutBtnText}>↩</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {/* Business Owners Button */}
+            <View style={[styles.explorerButtonWrapper, { justifyContent: 'center' }]}>
+              <TouchableOpacity
+                style={styles.roleButton}
+                onPressIn={handleBusinessPressIn}
+                onPressOut={handleBusinessPressOut}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.roleButtonText}>Business Owners</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </>
       )}
@@ -248,13 +315,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   roleButton: {
-    width: '85%',
+    flex: 1,
     height: 65,
     backgroundColor: DESIGN_COLORS.cardBackground,
     borderRadius: 32.5,
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 12,
     borderWidth: 2,
     borderColor: DESIGN_COLORS.border,
     elevation: 1,
@@ -267,6 +333,57 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: 'bold',
     color: DESIGN_COLORS.textPrimary,
+  },
+  explorerButtonWrapper: {
+    width: '85%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 12,
+    gap: 8,
+  },
+  explorerLoggedIn: {
+    alignItems: 'center',
+  },
+  explorerGreeting: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: DESIGN_COLORS.textPrimary,
+  },
+  explorerSubtext: {
+    fontSize: 12,
+    color: DESIGN_COLORS.textSecondary,
+    marginTop: 2,
+  },
+  logoutBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: DESIGN_COLORS.cardBackground,
+    borderWidth: 2,
+    borderColor: DESIGN_COLORS.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoutBtnText: {
+    fontSize: 18,
+    color: DESIGN_COLORS.textPrimary,
+  },
+  explorerActions: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  profileBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: DESIGN_COLORS.cardBackground,
+    borderWidth: 2,
+    borderColor: DESIGN_COLORS.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileBtnText: {
+    fontSize: 18,
   },
   modalOverlay: {
     position: 'absolute',

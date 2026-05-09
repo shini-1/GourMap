@@ -246,6 +246,54 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
     emoji: '🍽️',
     color: '#4A90E2', // Blue
   },
+
+  // Filipino
+  filipino: {
+    name: 'filipino',
+    label: 'Filipino',
+    emoji: '🍚',
+    color: '#E67E22', // Orange
+  },
+
+  // Chicken
+  chicken: {
+    name: 'chicken',
+    label: 'Chicken',
+    emoji: '🍗',
+    color: '#F39C12', // Golden
+  },
+
+  // Noodles
+  noodles: {
+    name: 'noodles',
+    label: 'Noodles',
+    emoji: '🍜',
+    color: '#E67E22', // Orange
+  },
+
+  // Vegetarian
+  vegetarian: {
+    name: 'vegetarian',
+    label: 'Vegetarian',
+    emoji: '🥗',
+    color: '#27AE60', // Green
+  },
+
+  // Breakfast
+  breakfast: {
+    name: 'breakfast',
+    label: 'Breakfast',
+    emoji: '🍳',
+    color: '#F39C12', // Golden
+  },
+
+  // Snacks
+  snacks: {
+    name: 'snacks',
+    label: 'Snacks',
+    emoji: '🍟',
+    color: '#E67E22', // Orange
+  },
 };
 
 /**

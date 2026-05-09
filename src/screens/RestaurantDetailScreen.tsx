@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
@@ -20,6 +21,8 @@ import { getAverageRating, getUserRating, submitRating } from '../services/ratin
 import { getDeviceId } from '../services/deviceId';
 import { submitDeviceRating, getDeviceRating } from '../services/deviceRatingsService';
 import { supabase } from '../config/supabase';
+import { favoritesService } from '../services/favoritesService';
+import { useAuth } from '../components/AuthContext';
 import Header from '../components/Header';
 import MapBoxNative from '../components/MapBoxNative';
 
@@ -96,6 +99,27 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 2,
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: DESIGN_COLORS.cardBackground,
+    borderWidth: 2,
+    borderColor: DESIGN_COLORS.border,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  favoriteButtonText: {
+    fontSize: 22,
   },
   backButtonText: {
     fontSize: 24,
@@ -243,6 +267,7 @@ interface RestaurantDetailScreenProps {
 
 function RestaurantDetailScreen({ navigation, route }: RestaurantDetailScreenProps) {
   const { theme } = useTheme();
+  const { explorerUser } = useAuth();
   const insets = useSafeAreaInsets();
 
   // Extract restaurant data from route params
@@ -262,12 +287,43 @@ function RestaurantDetailScreen({ navigation, route }: RestaurantDetailScreenPro
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [submittingRating, setSubmittingRating] = useState<boolean>(false);
 
+  // Favorites state
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
+  const [heartScale] = useState(new Animated.Value(1));
+
   // Debug logging
   useEffect(() => {
     console.log('🔍 RestaurantDetailScreen - route params:', route?.params);
     console.log('🔍 RestaurantDetailScreen - restaurantId:', restaurantId);
     console.log('🔍 RestaurantDetailScreen - initialRestaurant:', initialRestaurant);
   }, [route?.params, restaurantId, initialRestaurant]);
+
+  // Load favorite state for logged-in explorer
+  useEffect(() => {
+    if (!explorerUser || !restaurant?.id) return;
+    favoritesService.isFavorited(explorerUser.id, restaurant.id)
+      .then(setIsFavorited)
+      .catch(() => {});
+  }, [explorerUser, restaurant?.id]);
+
+  const handleFavoriteToggle = useCallback(async () => {
+    if (!explorerUser || !restaurant?.id || favLoading) return;
+    const next = !isFavorited;
+    setIsFavorited(next);
+    Animated.sequence([
+      Animated.timing(heartScale, { toValue: 1.4, duration: 120, useNativeDriver: true }),
+      Animated.timing(heartScale, { toValue: 1,   duration: 120, useNativeDriver: true }),
+    ]).start();
+    setFavLoading(true);
+    try {
+      await favoritesService.toggleFavorite(explorerUser.id, restaurant.id, !next);
+    } catch {
+      setIsFavorited(!next);
+    } finally {
+      setFavLoading(false);
+    }
+  }, [explorerUser, restaurant?.id, isFavorited, favLoading, heartScale]);
 
   // Load restaurant data if not provided
   useEffect(() => {
@@ -439,6 +495,19 @@ function RestaurantDetailScreen({ navigation, route }: RestaurantDetailScreenPro
           >
             <Text style={[styles.backButtonText, { color: DESIGN_COLORS.textPrimary }]}>✕</Text>
           </TouchableOpacity>
+
+          {/* Favorites button — only shown when logged in */}
+          {explorerUser && (
+            <TouchableOpacity
+              style={[styles.favoriteButton, { top: insets.top + 10 }]}
+              onPress={handleFavoriteToggle}
+              disabled={favLoading}
+            >
+              <Animated.Text style={[styles.favoriteButtonText, { transform: [{ scale: heartScale }] }]}>
+                {isFavorited ? '❤️' : '🤍'}
+              </Animated.Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Restaurant Info */}

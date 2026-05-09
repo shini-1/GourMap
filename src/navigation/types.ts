@@ -2,6 +2,10 @@ export type RootStackParamList = {
   RoleSelection: undefined;
   Home: undefined;
   AIChat: undefined;
+  ExplorerProfile: undefined;
+  Favorites: undefined;
+  RatingHistory: undefined;
+  OnboardingPreferences: { userId: string; isEditing?: boolean };
   BusinessPanel: undefined;
   AdminPanel: undefined;
   CreateAdmin: undefined;
