@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, Alert } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import Constants from 'expo-constants';
 import { Restaurant } from '../types';
+import { resolveCategoryConfig } from '../config/categoryConfig';
 
 // Set Mapbox Access Token
 const mapboxToken = Constants.expoConfig?.extra?.mapboxAccessToken || 'YOUR_MAPBOX_TOKEN';
@@ -78,19 +79,23 @@ const MapBoxNative: React.FC<MapBoxNativeProps> = ({ restaurants, isTyping = fal
         
         <MapboxGL.UserLocation onUpdate={(location) => setUserLocation([location.coords.longitude, location.coords.latitude])} />
 
-        {restaurants.map((restaurant) => (
-          <MapboxGL.PointAnnotation
-            key={restaurant.id}
-            id={restaurant.id}
-            coordinate={[restaurant.location.longitude, restaurant.location.latitude]}
-            title={restaurant.name}
-          >
-            <View style={[styles.marker, { backgroundColor: restaurant.categoryColor || '#FF0000' }]}>
-              <Text style={styles.markerEmoji}>{restaurant.categoryEmoji || '🍽️'}</Text>
-            </View>
-            <MapboxGL.Callout title={restaurant.name} />
-          </MapboxGL.PointAnnotation>
-        ))}
+        {restaurants.map((restaurant) => {
+          // Resolve category config here so markers always have correct emoji/color
+          const catConfig = resolveCategoryConfig(restaurant.category, restaurant.name);
+          return (
+            <MapboxGL.PointAnnotation
+              key={restaurant.id}
+              id={restaurant.id}
+              coordinate={[restaurant.location.longitude, restaurant.location.latitude]}
+              title={restaurant.name}
+            >
+              <View style={[styles.marker, { backgroundColor: catConfig.color }]}>
+                <Text style={styles.markerEmoji}>{catConfig.emoji}</Text>
+              </View>
+              <MapboxGL.Callout title={restaurant.name} />
+            </MapboxGL.PointAnnotation>
+          );
+        })}
       </MapboxGL.MapView>
 
       <TouchableOpacity style={styles.locationButton} onPress={handleLocationPress}>

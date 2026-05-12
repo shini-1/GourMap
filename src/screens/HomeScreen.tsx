@@ -21,7 +21,7 @@ import RatingSyncIndicator from '../components/RatingSyncIndicator';
 import EnhancedRestaurantCard from '../components/EnhancedRestaurantCard';
 import RatingSortSelector, { SortOption } from '../components/RatingSortSelector';
 import { reverseGeocode } from '../services/geocodingService';
-import { resolveCategoryConfig, getAllCategoryOptions } from '../config/categoryConfig';
+import { resolveCategoryConfig, getAllCategoryOptions, getCategoryConfig, DEFAULT_CATEGORY } from '../config/categoryConfig';
 import { restaurantService } from '../services/restaurantService';
 import { DatabaseService } from '../services/database';
 import { RestaurantRow } from '../types/database';
@@ -32,6 +32,7 @@ import { ratingCalculationService, RestaurantRatingData } from '../services/rati
 import { useNetwork } from '../contexts/NetworkContext';
 import { useAuth } from '../components/AuthContext';
 import { favoritesService } from '../services/favoritesService';
+import FoxMascot from '../components/FoxMascot';
 import { syncService } from '../services/syncService';
 import { localDatabase } from '../services/localDatabase';
 import { Restaurant } from '../types';
@@ -229,17 +230,17 @@ const validateTextValue = (value: any, context: string): string => {
   return value;
 };
 
-// Design colors matching the mockup exactly
+// Design colors — warm cream + terracotta aesthetic
 const DESIGN_COLORS = {
-  background: '#E6F3FF',      // Light blue - main screen background
-  cardBackground: '#FFFFFF',   // White - card backgrounds
-  border: '#000000',           // Black - all borders
-  textPrimary: '#000000',      // Black - primary text (names, types)
-  textSecondary: '#666666',    // Gray - secondary text (locations)
-  textPlaceholder: '#999999',  // Light gray - placeholder text
-  buttonBackground: '#FFFFFF', // White - button backgrounds
-  infoBg: '#000000',          // Black - info button background
-  infoText: '#FFFFFF',        // White - info button text
+  background:     '#FDF6EE',
+  cardBackground: '#FFFFFF',
+  border:         '#E0D8CF',
+  textPrimary:    '#2C2C2C',
+  textSecondary:  '#6B6560',
+  textPlaceholder:'#A89F96',
+  buttonBackground:'#FFFFFF',
+  infoBg:         '#D4622A',
+  infoText:       '#FFFFFF',
 };
 
 // Styles moved before component to fix variable declaration issues
@@ -595,6 +596,70 @@ const styles = StyleSheet.create({
     color: DESIGN_COLORS.textPrimary,
     fontWeight: '500',
   },
+  // Search result count bar
+  searchResultBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    backgroundColor: DESIGN_COLORS.background,
+  },
+  searchResultText: {
+    fontSize: 12,
+    color: DESIGN_COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  searchClearText: {
+    fontSize: 12,
+    color: DESIGN_COLORS.textPrimary,
+    fontWeight: '600',
+  },
+  // Floating chatbot button
+  fabContainer: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    zIndex: 100,
+    alignItems: 'flex-end',
+    gap: 10,
+  },
+  fab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: DESIGN_COLORS.infoBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    borderWidth: 2,
+    borderColor: DESIGN_COLORS.border,
+  },
+  fabIcon: {
+    fontSize: 24,
+  },
+  fabProfile: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: DESIGN_COLORS.cardBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    borderWidth: 2,
+    borderColor: DESIGN_COLORS.border,
+  },
+  fabProfileIcon: {
+    fontSize: 18,
+  },
 });
 
 // Local placeholder image — bundled with the app, no network required
@@ -610,6 +675,22 @@ function isValidHttpUrl(value?: string): boolean {
   } catch {
     return false;
   }
+}
+
+// ── Levenshtein distance for fuzzy search ────────────────────────────────────
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
 }
 
 // ── For You Section ───────────────────────────────────────────────────────────
@@ -1526,36 +1607,56 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
 
     // Early return for empty search
     if (!debouncedSearchText.trim()) {
-      return selectedCategory === 'all' 
-        ? categorizedRestaurants 
-        : categorizedRestaurants.filter(r => r.category === selectedCategory);
+      return selectedCategory === 'all'
+        ? categorizedRestaurants
+        : categorizedRestaurants.filter(r => {
+            // Match by resolved category key so "Grill & BBQ" filter catches both grill and bbq DB values
+            const resolved = resolveCategoryConfig(r.category, r.name);
+            return resolved.name === selectedCategory || r.category === selectedCategory;
+          });
     }
 
     const searchTerm = debouncedSearchText.toLowerCase().trim();
 
+    // Resolve what category the search term maps to (e.g. "inihaw" → "grill")
+    const searchCategoryConfig = getCategoryConfig(searchTerm);
+    const searchMatchesCategory = searchCategoryConfig !== DEFAULT_CATEGORY;
+
     return categorizedRestaurants.filter((restaurant) => {
-      // Safety check - ensure restaurant is valid
-      if (!restaurant || typeof restaurant !== 'object') {
-        return false;
-      }
-      if (!restaurant.name || typeof restaurant.name !== 'string') {
-        return false;
-      }
+      if (!restaurant || !restaurant.name) return false;
 
       // Category filter
-      const matchesCategory = selectedCategory === 'all' || restaurant.category === selectedCategory;
-      if (!matchesCategory) return false;
-
-      // Text search filter - only if search term exists
-      if (searchTerm) {
-        const nameMatch = restaurant.name.toLowerCase().includes(searchTerm);
-        const categoryMatch = restaurant.category?.toLowerCase().includes(searchTerm);
-        const descriptionMatch = restaurant.description?.toLowerCase().includes(searchTerm);
-        
-        return nameMatch || categoryMatch || descriptionMatch;
+      if (selectedCategory !== 'all') {
+        const resolved = resolveCategoryConfig(restaurant.category, restaurant.name);
+        if (resolved.name !== selectedCategory && restaurant.category !== selectedCategory) return false;
       }
 
-      return true;
+      // 1. Exact / partial name match
+      const nameLower = restaurant.name.toLowerCase();
+      if (nameLower.includes(searchTerm)) return true;
+
+      // 2. Category alias match — "inihaw" finds all grill restaurants
+      if (searchMatchesCategory) {
+        const resolved = resolveCategoryConfig(restaurant.category, restaurant.name);
+        if (resolved.name === searchCategoryConfig.name) return true;
+      }
+
+      // 3. Category label match — "Filipino" finds all filipino restaurants
+      const resolvedCat = resolveCategoryConfig(restaurant.category, restaurant.name);
+      if (resolvedCat.label.toLowerCase().includes(searchTerm)) return true;
+
+      // 4. Description match
+      if (restaurant.description?.toLowerCase().includes(searchTerm)) return true;
+
+      // 5. Fuzzy name match — allow 1 character difference for short terms
+      if (searchTerm.length >= 4) {
+        const words = nameLower.split(/\s+/);
+        for (const word of words) {
+          if (word.length >= 3 && levenshtein(word, searchTerm) <= 1) return true;
+        }
+      }
+
+      return false;
     });
   }, [categorizedRestaurants, debouncedSearchText, selectedCategory]);
 
@@ -1832,15 +1933,6 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
           <Text style={styles.categoryDropdownArrow}>▼</Text>
         </TouchableOpacity>
 
-        {/* AI Chat button */}
-        <TouchableOpacity
-          style={styles.aiChatButton}
-          onPress={() => navigation.navigate('AIChat')}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.aiChatButtonIcon}>🤖</Text>
-        </TouchableOpacity>
-
         {/* Profile button — only shown when logged in as explorer */}
         {explorerUser && (
           <TouchableOpacity
@@ -1852,6 +1944,23 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Search result count — shown when actively searching */}
+      {debouncedSearchText.trim() ? (
+        <View style={styles.searchResultBar}>
+          <Text style={styles.searchResultText}>
+            {visibleRestaurants.length === 0
+              ? `No results for "${debouncedSearchText}"`
+              : `${visibleRestaurants.length} result${visibleRestaurants.length !== 1 ? 's' : ''} for "${debouncedSearchText}"`}
+          </Text>
+          <TouchableOpacity
+            onPress={() => { setSearchText(''); setIsSearchTyping(false); }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.searchClearText}>✕ Clear</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       {/* Category Filter Modal */}
       <Modal
@@ -2012,6 +2121,26 @@ function HomeScreen({ navigation }: { navigation: any }): React.ReactElement {
         }
         ListFooterComponent={renderListFooter}
       />
+
+      {/* Floating Action Buttons — chatbot + profile */}
+      <View style={styles.fabContainer} pointerEvents="box-none">
+        {explorerUser && (
+          <TouchableOpacity
+            style={styles.fabProfile}
+            onPress={() => navigation.navigate('ExplorerProfile')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.fabProfileIcon}>👤</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => navigation.navigate('AIChat')}
+          activeOpacity={0.85}
+        >
+          <FoxMascot size={40} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
   

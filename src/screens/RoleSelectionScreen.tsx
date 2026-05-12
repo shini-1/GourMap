@@ -8,17 +8,17 @@ import RegisterScreenNew from './RegisterScreenNew';
 import AdminLoginScreen from './AdminLoginScreen';
 import ExplorerAuthScreen from './ExplorerAuthScreen';
 
-// Design colors matching the Home Screen exactly
+// Design colors — warm cream + terracotta aesthetic
 const DESIGN_COLORS = {
-  background: '#E6F3FF',      // Light blue - main screen background
-  cardBackground: '#FFFFFF',   // White - card backgrounds
-  border: '#000000',           // Black - all borders
-  textPrimary: '#000000',      // Black - primary text (names, types)
-  textSecondary: '#666666',    // Gray - secondary text (locations)
-  textPlaceholder: '#999999',  // Light gray - placeholder text
-  buttonBackground: '#FFFFFF', // White - button backgrounds
-  infoBg: '#000000',          // Black - info button background
-  infoText: '#FFFFFF',        // White - info button text
+  background:    '#FDF6EE',   // warm off-white
+  cardBackground:'#FFFFFF',
+  border:        '#E0D8CF',   // soft warm gray border
+  textPrimary:   '#2C2C2C',   // deep charcoal
+  textSecondary: '#6B6560',
+  textPlaceholder:'#A89F96',
+  buttonBackground:'#FFFFFF',
+  infoBg:        '#D4622A',   // terracotta accent
+  infoText:      '#FFFFFF',
 };
 
 function RoleSelectionScreen({ navigation }: { navigation: any }) {
@@ -321,13 +321,13 @@ const styles = StyleSheet.create({
     borderRadius: 32.5,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: DESIGN_COLORS.border,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
+    elevation: 2,
+    shadowColor: '#2C2C2C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
   },
   roleButtonText: {
     fontSize: 19,

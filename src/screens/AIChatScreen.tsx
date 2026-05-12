@@ -18,24 +18,25 @@ import { favoritesService } from '../services/favoritesService';
 import { Restaurant } from '../types';
 import { resolveCategoryConfig } from '../config/categoryConfig';
 import { useAuth } from '../components/AuthContext';
+import FoxMascot from '../components/FoxMascot';
 
 const PLACEHOLDER_IMAGE = require('../../assets/icon.png');
 
 const COLORS = {
-  background:    '#E6F3FF',
+  background:    '#FDF6EE',
   card:          '#FFFFFF',
-  border:        '#000000',
-  textPrimary:   '#000000',
-  textSecondary: '#666666',
-  textMuted:     '#999999',
-  userBubble:    '#000000',
+  border:        '#E0D8CF',
+  textPrimary:   '#2C2C2C',
+  textSecondary: '#6B6560',
+  textMuted:     '#A89F96',
+  userBubble:    '#D4622A',
   userText:      '#FFFFFF',
   aiBubble:      '#FFFFFF',
-  aiText:        '#000000',
+  aiText:        '#2C2C2C',
   inputBg:       '#FFFFFF',
-  sendBtn:       '#000000',
+  sendBtn:       '#D4622A',
   sendBtnText:   '#FFFFFF',
-  accent:        '#4A90E2',
+  accent:        '#D4622A',
 };
 
 // ── Restaurant result card (inline in chat) ───────────────────────────────────
@@ -112,7 +113,7 @@ function MessageBubble({
     >
       {!isUser && (
         <View style={styles.aiAvatar}>
-          <Text style={styles.aiAvatarText}>🤖</Text>
+          <FoxMascot size={28} />
         </View>
       )}
 
@@ -177,7 +178,7 @@ function TypingIndicator() {
   return (
     <View style={[styles.messageRow, styles.messageRowAI]}>
       <View style={styles.aiAvatar}>
-        <Text style={styles.aiAvatarText}>🤖</Text>
+        <FoxMascot size={28} />
       </View>
       <View style={[styles.bubble, styles.bubbleAI, styles.typingBubble]}>
         {[dot1, dot2, dot3].map((dot, i) => (
@@ -365,8 +366,13 @@ export default function AIChatScreen({ navigation }: { navigation: any }) {
           <Text style={styles.backIcon}>✕</Text>
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>🤖 Food Assistant</Text>
-          <Text style={styles.headerSubtitle}>Ask me anything about food</Text>
+          <View style={styles.headerMascotRow}>
+            <FoxMascot size={32} />
+            <View style={styles.headerTitleGroup}>
+              <Text style={styles.headerTitle}>Foxy</Text>
+              <Text style={styles.headerSubtitle}>GourMap Food Assistant</Text>
+            </View>
+          </View>
         </View>
         <View style={styles.headerRight} />
       </View>
@@ -469,6 +475,14 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
+  headerMascotRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerTitleGroup: {
+    alignItems: 'flex-start',
+  },
   headerTitle: {
     fontSize: 16,
     fontWeight: '700',
@@ -501,9 +515,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   aiAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 45,
+    borderRadius: 4,
     backgroundColor: COLORS.card,
     borderWidth: 2,
     borderColor: COLORS.border,
@@ -511,9 +525,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 8,
     marginBottom: 2,
-  },
-  aiAvatarText: {
-    fontSize: 16,
+    overflow: 'hidden',
+    padding: 2,
   },
   bubble: {
     maxWidth: '78%',
