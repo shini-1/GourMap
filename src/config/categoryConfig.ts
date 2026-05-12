@@ -29,7 +29,8 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
       'longsilog', 'tocilog', 'bangsilog', 'adobo', 'sinigang', 'kare kare',
       'kare-kare', 'bulalo', 'nilaga', 'tinola', 'pinakbet', 'bicol express',
       'lechon', 'crispy pata', 'dinuguan', 'caldereta', 'mechado', 'afritada',
-      'local food', 'local', 'pinoy food', 'lutong pilipino',
+      'local food', 'local', 'pinoy food', 'lutong pilipino', 'lokal', 'bindunggo', 'pares',
+      'baga', 'chicken skin'
     ],
   },
 
@@ -56,7 +57,7 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
       'seafood', 'fish', 'shrimp', 'crab', 'lobster', 'squid', 'pusit',
       'hipon', 'alimango', 'alimasag', 'talaba', 'oyster', 'clam', 'tahong',
       'halaan', 'bangus', 'tilapia', 'tuna', 'salmon', 'isda', 'kinilaw',
-      'kilawin', 'sugpo',
+      'kilawin', 'sugpo', 'taeaba'
     ],
   },
 
