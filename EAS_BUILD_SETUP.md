@@ -55,11 +55,11 @@ eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_URL \
   --value "https://hiioeustuvxgyoezweyp.supabase.co" --force
 
 eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY \
-  --value "<your-anon-key>" --force
+  --value "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpaW9ldXN0dXZ4Z3lvZXp3ZXlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjQ4ODcsImV4cCI6MjA5MjYwMDg4N30.jPdTn5WYV9JQiTmYDuAy6PHakkODPbwm3TZ74w68-0Y" --force
 
 # Mapbox — SECRET downloads token (sk.*), NOT the public pk.* token
 eas secret:create --scope project --name MAPBOX_DOWNLOADS_TOKEN \
-  --value "<your-secret-mapbox-token>" --force
+  --value "<MAPBOX_DOWNLOADS_TOKEN>" --force
 ```
 
 ### Verify secrets are set
