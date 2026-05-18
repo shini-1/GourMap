@@ -37,14 +37,12 @@ export class LocationService {
 
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
-        maximumAge: 30000,
-        timeout: 15000,
-      });
+      } as any);
 
       return {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-        accuracy: location.coords.accuracy,
+        accuracy: location.coords.accuracy ?? undefined,
         timestamp: location.timestamp,
       };
     } catch (error) {

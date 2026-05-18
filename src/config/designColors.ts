@@ -55,6 +55,8 @@ export const COLORS = {
   textOnDark:     '#FFFFFF',
   /** FAB shadow */
   shadow:         '#2C2C2C',
+  /** Card background color */
+  cardBackground: '#FFFFFF',
 };
 
 /** Consistent border radius values */
@@ -84,4 +86,21 @@ export const FONT = {
   xl:   18,
   xxl:  22,
   hero: 28,
+};
+
+export const DESIGN_COLORS = COLORS;
+
+export const SHADOW_STYLE = {
+  shadowColor: COLORS.shadow,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.15,
+  shadowRadius: 8,
+  elevation: 3,
+};
+
+export const BORDER_RADIUS = {
+  circle: 24,
+  small: 8,
+  medium: 12,
+  large: 16,
 };
