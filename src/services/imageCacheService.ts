@@ -1,7 +1,7 @@
 import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const CACHE_DIR = `${FileSystem.cacheDirectory}restaurant-images/`;
+const CACHE_DIR = `${(FileSystem as any).cacheDirectory}restaurant-images/`;
 const IMAGE_CACHE_KEY = 'cached_image_urls';
 const MAX_CACHE_SIZE_MB = 50; // 50MB max cache size
 
@@ -79,8 +79,7 @@ export class ImageCacheService {
       if (downloadResult.status === 200) {
         // Get file size
         const fileInfo = await FileSystem.getInfoAsync(localPath);
-        const size = fileInfo.size || 0;
-
+      const size = (fileInfo as any).size || 0;
         // Add to cache index
         const cache = await this.getImageCache();
         cache.push({

@@ -276,7 +276,11 @@ class RatingSyncService {
 
     } catch (error) {
       console.error('❌ Error processing sync queue:', error);
-      this.notifyListeners({ status: 'error', error: error instanceof Error ? error.message : 'Unknown error' });
+      this.notifyListeners({
+        status: 'error',
+        queueLength: this.syncQueue.length,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     } finally {
       this.syncInProgress = false;
     }

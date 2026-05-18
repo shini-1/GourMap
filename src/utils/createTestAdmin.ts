@@ -36,7 +36,7 @@ export const createTestAdmin = async () => {
  */
 export const createAdminDirect = async () => {
   try {
-    const { supabase } = await import('../services/firebaseShim');
+    const { supabase } = await import('../config/supabase');
 
     const { data, error } = await supabase.auth.signUp({
       email: 'admin@gourmap.com',
