@@ -258,6 +258,8 @@ EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN=YOUR_MAPBOX_TOKEN
 2. Get your access token from the account dashboard
 3. Add token to `.env` file (already included in app.json)
 
+> For Android builds, `MAPBOX_DOWNLOADS_TOKEN` is only needed when using a private Mapbox Maven download token. Public Mapbox Android artifacts are supported without a token in the current configuration.
+
 ### Step 5: Run the Application
 
 ```bash

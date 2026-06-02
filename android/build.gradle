@@ -27,10 +27,14 @@ allprojects {
     mavenCentral()
     maven {
       url 'https://api.mapbox.com/downloads/v2/releases/maven'
-      authentication { basic(org.gradle.authentication.http.BasicAuthentication) }
-      credentials {
-        username = 'mapbox'
-        password = project.findProperty('MAPBOX_DOWNLOADS_TOKEN') ?: System.getenv('MAPBOX_DOWNLOADS_TOKEN')
+      // Mapbox public download artifacts no longer require MAPBOX_DOWNLOADS_TOKEN.
+      // Only supply credentials when a token is explicitly configured.
+      if (project.hasProperty('MAPBOX_DOWNLOADS_TOKEN') || System.getenv('MAPBOX_DOWNLOADS_TOKEN')) {
+        authentication { basic(org.gradle.authentication.http.BasicAuthentication) }
+        credentials {
+          username = 'mapbox'
+          password = project.findProperty('MAPBOX_DOWNLOADS_TOKEN') ?: System.getenv('MAPBOX_DOWNLOADS_TOKEN')
+        }
       }
     }
     maven { url 'https://www.jitpack.io' }
