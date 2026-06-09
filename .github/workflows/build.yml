@@ -57,14 +57,38 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: 🚀 EAS Build (preview APK)
-        run: eas build --platform android --profile preview --non-interactive
+        run: eas build --platform android --profile preview --non-interactive --wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-  # ─── EAS Production Build — Android AAB (push to main or version tags) ──────
+      - name: 📥 Download preview APK from EAS
+        if: success()
+        run: |
+          mkdir -p ./build
+          ARTIFACT_URL=$(eas build:list --platform android --limit 1 --json --non-interactive | jq -r '.[0].artifacts.buildUrl')
+          if [ -z "$ARTIFACT_URL" ] || [ "$ARTIFACT_URL" = "null" ]; then
+            echo "ERROR: No Android build artifact URL returned."
+            exit 1
+          fi
+          echo "Downloading preview APK from: $ARTIFACT_URL"
+          curl -L -H "Authorization: Bearer $EXPO_TOKEN" "$ARTIFACT_URL" -o ./build/app-preview.apk
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📤 Upload preview APK to artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-apk
+          path: ./build/app-preview.apk
+          retention-days: 30
+
+  # ─── EAS Production Build — Android AAB (every push) ──────
   eas-production:
     name: 🏭 EAS Production Build
     runs-on: ubuntu-latest
     needs: validate
-    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push'
     steps:
       - name: 🏗 Checkout
         uses: actions/checkout@v4
@@ -87,4 +111,38 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: 🚀 EAS Build (production AAB)
-        run: eas build --platform android --profile production --non-interactive
+        run: eas build --platform android --profile production --non-interactive --wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📥 Download production AAB from EAS
+        if: success()
+        run: |
+          mkdir -p ./build
+          ARTIFACT_URL=$(eas build:list --platform android --limit 1 --json --non-interactive | jq -r '.[0].artifacts.buildUrl')
+          if [ -z "$ARTIFACT_URL" ] || [ "$ARTIFACT_URL" = "null" ]; then
+            echo "ERROR: No Android build artifact URL returned."
+            exit 1
+          fi
+          echo "Downloading production AAB from: $ARTIFACT_URL"
+          curl -L -H "Authorization: Bearer $EXPO_TOKEN" "$ARTIFACT_URL" -o ./build/app-production.aab
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📤 Upload AAB to artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-aab
+          path: ./build/app-production.aab
+          retention-days: 90
+
+      - name: 🏷️ Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/v') && success()
+        with:
+          files: ./build/app-production.aab
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
