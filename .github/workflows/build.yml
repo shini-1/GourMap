@@ -88,7 +88,7 @@ jobs:
           path: ./build/app-preview.apk
           retention-days: 30
 
-  # ─── EAS Production Build — Android AAB (every push) ──────
+  # ─── EAS Production Build — Android APK (every push) ──────
   eas-production:
     name: 🏭 EAS Production Build
     runs-on: ubuntu-latest
@@ -115,12 +115,12 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: 🚀 EAS Build (production AAB)
+      - name: 🚀 EAS Build (production APK)
         run: eas build --platform android --profile production --non-interactive --wait
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: 📥 Download production AAB from EAS
+      - name: 📥 Download production APK from EAS
         if: success()
         run: |
           mkdir -p ./build
@@ -134,24 +134,24 @@ jobs:
             echo "ERROR: Could not extract artifact URL."
             exit 1
           fi
-          echo "Downloading production AAB from: $ARTIFACT_URL"
-          curl -L -H "Authorization: Bearer $EXPO_TOKEN" "$ARTIFACT_URL" -o ./build/app-production.aab
+          echo "Downloading production APK from: $ARTIFACT_URL"
+          curl -L -H "Authorization: Bearer $EXPO_TOKEN" "$ARTIFACT_URL" -o ./build/app-production.apk
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: 📤 Upload AAB to artifacts
+      - name: 📤 Upload APK to artifacts
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: production-aab
-          path: ./build/app-production.aab
+          name: production-apk
+          path: ./build/app-production.apk
           retention-days: 90
 
       - name: 🏷️ Create GitHub Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v') && success()
         with:
-          files: ./build/app-production.aab
+          files: ./build/app-production.apk
           draft: false
           prerelease: false
         env:
