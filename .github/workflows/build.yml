@@ -63,22 +63,31 @@ jobs:
 
       - name: 📥 Download preview APK from EAS
         if: success()
-        run: |
-          mkdir -p ./build
-          echo "Fetching latest EAS build..."
-          BUILD_INFO=$(eas build:list --platform android --limit 1 --json --non-interactive)
-          echo "Build info: $BUILD_INFO"
-          ARTIFACT_URL=$(echo "$BUILD_INFO" | jq -r '.[0].artifacts.buildUrl // .[0].buildUrl // empty')
-          if [ -z "$ARTIFACT_URL" ] || [ "$ARTIFACT_URL" = "null" ]; then
-            echo "DEBUG: Full response:"
-            echo "$BUILD_INFO" | jq '.'
-            echo "ERROR: Could not extract artifact URL."
-            exit 1
-          fi
-          echo "Downloading preview APK from: $ARTIFACT_URL"
-          curl -L -H "Authorization: Bearer $EXPO_TOKEN" "$ARTIFACT_URL" -o ./build/app-preview.apk
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          mkdir -p ./build
+          echo "Waiting for preview build artifact..."
+          for attempt in $(seq 1 30); do
+            BUILD_INFO=$(eas build:list --platform android --limit 20 --json --non-interactive)
+            BUILD_ENTRY=$(echo "$BUILD_INFO" | jq -r --arg sha "$GITHUB_SHA" --arg profile "preview" '.[] | select(.gitCommitHash == $sha and .buildProfile == $profile) | @json' | head -n 1)
+            if [ -n "$BUILD_ENTRY" ]; then
+              STATUS=$(echo "$BUILD_ENTRY" | jq -r '.status')
+              ARTIFACT_URL=$(echo "$BUILD_ENTRY" | jq -r '.artifacts.buildUrl // .buildUrl // empty')
+              echo "Preview build status: $STATUS"
+              if [ "$STATUS" = "FINISHED" ] && [ -n "$ARTIFACT_URL" ] && [ "$ARTIFACT_URL" != "null" ]; then
+                echo "Downloading preview APK from: $ARTIFACT_URL"
+                curl -L -H "Authorization: Bearer $EXPO_TOKEN" "$ARTIFACT_URL" -o ./build/app-preview.apk
+                exit 0
+              fi
+            fi
+            echo "Preview build not ready yet (attempt $attempt/30)..."
+            sleep 30
+          done
+          echo "DEBUG: Full response:"
+          echo "$BUILD_INFO" | jq '.'
+          echo "ERROR: Could not extract preview artifact URL."
+          exit 1
 
       - name: 📤 Upload preview APK to artifacts
         if: success()
@@ -122,22 +131,31 @@ jobs:
 
       - name: 📥 Download production APK from EAS
         if: success()
-        run: |
-          mkdir -p ./build
-          echo "Fetching latest EAS build..."
-          BUILD_INFO=$(eas build:list --platform android --limit 1 --json --non-interactive)
-          echo "Build info: $BUILD_INFO"
-          ARTIFACT_URL=$(echo "$BUILD_INFO" | jq -r '.[0].artifacts.buildUrl // .[0].buildUrl // empty')
-          if [ -z "$ARTIFACT_URL" ] || [ "$ARTIFACT_URL" = "null" ]; then
-            echo "DEBUG: Full response:"
-            echo "$BUILD_INFO" | jq '.'
-            echo "ERROR: Could not extract artifact URL."
-            exit 1
-          fi
-          echo "Downloading production APK from: $ARTIFACT_URL"
-          curl -L -H "Authorization: Bearer $EXPO_TOKEN" "$ARTIFACT_URL" -o ./build/app-production.apk
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          mkdir -p ./build
+          echo "Waiting for production build artifact..."
+          for attempt in $(seq 1 30); do
+            BUILD_INFO=$(eas build:list --platform android --limit 20 --json --non-interactive)
+            BUILD_ENTRY=$(echo "$BUILD_INFO" | jq -r --arg sha "$GITHUB_SHA" --arg profile "production" '.[] | select(.gitCommitHash == $sha and .buildProfile == $profile) | @json' | head -n 1)
+            if [ -n "$BUILD_ENTRY" ]; then
+              STATUS=$(echo "$BUILD_ENTRY" | jq -r '.status')
+              ARTIFACT_URL=$(echo "$BUILD_ENTRY" | jq -r '.artifacts.buildUrl // .buildUrl // empty')
+              echo "Production build status: $STATUS"
+              if [ "$STATUS" = "FINISHED" ] && [ -n "$ARTIFACT_URL" ] && [ "$ARTIFACT_URL" != "null" ]; then
+                echo "Downloading production APK from: $ARTIFACT_URL"
+                curl -L -H "Authorization: Bearer $EXPO_TOKEN" "$ARTIFACT_URL" -o ./build/app-production.apk
+                exit 0
+              fi
+            fi
+            echo "Production build not ready yet (attempt $attempt/30)..."
+            sleep 30
+          done
+          echo "DEBUG: Full response:"
+          echo "$BUILD_INFO" | jq '.'
+          echo "ERROR: Could not extract production artifact URL."
+          exit 1
 
       - name: 📤 Upload APK to artifacts
         if: success()
